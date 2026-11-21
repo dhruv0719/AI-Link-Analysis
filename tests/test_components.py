@@ -13,8 +13,8 @@ from app.config import MODEL_PRICING, Settings
 from app.errors import AppError
 from app.prompts import OUTPUT_EXAMPLE
 from app.schemas import LLMAnalysis
-from app.services.llm_service import (AnthropicProvider, Completion, GeminiProvider, LLMProviderError, LLMService,
-                                      OpenAIProvider, estimate_cost, parse_json_text, StructuredOutputError)
+from app.services.llm_service import (AnthropicProvider, Completion, GeminiProvider, GroqProvider, LLMProviderError, LLMService,
+                                      OpenAIProvider, PROVIDERS, estimate_cost, parse_json_text, StructuredOutputError)
 from app.services.website_extractor import SafeFetcher, parse_page, pick_key_pages, seo_audit
 from app.utils.cache import TTLCache
 from app.utils.ratelimit import RateLimiter
@@ -264,6 +264,102 @@ async def test_gemini_request_counts_thinking_tokens_as_output():
     assert out.text == '{"a": 2}' and out.output_tokens == 3500 and out.input_tokens == 7000
 
 
+async def test_groq_request_and_usage():
+    seen = {}
+
+    def handler(req: httpx.Request):
+        seen.update(url=str(req.url), auth=req.headers["authorization"], body=json.loads(req.content))
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": '{"ok": true}'}, "finish_reason": "stop"}],
+            "usage": {
+                "prompt_tokens": 6000,
+                "completion_tokens": 2500,
+                "prompt_tokens_details": {"cached_tokens": 1000},
+            },
+        })
+
+    p = GroqProvider("openai/gpt-oss-120b", "gsk-secret", make_settings(), _client(handler))
+    out = await p.complete("sys JSON", "user", {})
+    assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    assert seen["auth"] == "Bearer gsk-secret"
+    assert seen["body"]["model"] == "openai/gpt-oss-120b"
+    assert seen["body"]["messages"] == [{"role": "system", "content": "sys JSON"}, {"role": "user", "content": "user"}]
+    assert seen["body"]["response_format"] == {"type": "json_object"}
+    assert seen["body"]["max_completion_tokens"] == 8000
+    assert out.text == '{"ok": true}'
+    assert (out.input_tokens, out.cached_input_tokens, out.output_tokens) == (5000, 1000, 2500)
+
+
+async def test_groq_truncation_detected():
+    def handler(req):
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{"}, "finish_reason": "length"}], "usage": {}})
+    p = GroqProvider("openai/gpt-oss-120b", "k", make_settings(), _client(handler))
+    with pytest.raises(StructuredOutputError, match="truncated"):
+        await p.complete("s", "u", {})
+
+
+async def test_groq_empty_and_malformed_response():
+    # Empty content
+    p_empty = GroqProvider("openai/gpt-oss-120b", "k", make_settings(),
+                           _client(lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "   "}, "finish_reason": "stop"}], "usage": {}})))
+    with pytest.raises(StructuredOutputError, match="empty response content"):
+        await p_empty.complete("s", "u", {})
+
+    # Missing choices / malformed shape
+    for bad_json in ({}, {"choices": []}, {"choices": [{}]}):
+        p_bad = GroqProvider("openai/gpt-oss-120b", "k", make_settings(), _client(lambda r, b=bad_json: httpx.Response(200, json=b)))
+        with pytest.raises(LLMProviderError) as exc:
+            await p_bad.complete("s", "u", {})
+        assert exc.value.retryable is True
+
+
+@pytest.mark.parametrize("status,retryable,kind", [
+    (401, False, "auth"),
+    (404, False, "model"),
+    (400, False, "bad_request"),
+    (429, True, "rate_limit"),
+    (500, True, "error"),
+    (503, True, "error"),
+])
+async def test_groq_http_status_classification(status, retryable, kind):
+    p = GroqProvider("openai/gpt-oss-120b", "k", make_settings(), _client(lambda r: httpx.Response(status, json={"error": {"message": "groq boom"}})))
+    with pytest.raises(LLMProviderError) as exc:
+        await p.complete("s", "u", {})
+    assert exc.value.retryable is retryable and exc.value.kind == kind
+
+
+async def test_groq_timeout_handling():
+    def timeout_handler(req):
+        raise httpx.ReadTimeout("Groq read timed out", request=req)
+    p = GroqProvider("openai/gpt-oss-120b", "k", make_settings(), _client(timeout_handler))
+    with pytest.raises(LLMProviderError) as exc:
+        await p.complete("s", "u", {})
+    assert exc.value.retryable is True and exc.value.kind == "timeout"
+
+
+async def test_groq_api_key_protection():
+    secret = "gsk-SUPER-SECRET-GROQ-123"
+    settings = make_settings(groq_api_key=secret)
+    p = GroqProvider("openai/gpt-oss-120b", secret, settings, _client(lambda r: httpx.Response(401, json={"error": {"message": "bad key"}})))
+    with pytest.raises(LLMProviderError) as exc:
+        await p.complete("s", "u", {})
+    assert secret not in str(exc.value)
+    assert secret not in repr(settings)
+
+
+def test_groq_registration_and_settings():
+    assert PROVIDERS["groq"] is GroqProvider
+    settings = make_settings(llm_provider="groq", groq_api_key="gsk-configured-key", llm_model=None)
+    assert settings.api_key_for("groq") == "gsk-configured-key"
+    assert settings.model_for("groq") == "openai/gpt-oss-120b"
+    assert settings.primary_model == "openai/gpt-oss-120b"
+    service = LLMService(settings, _client(lambda r: httpx.Response(200)))
+    assert len(service.chain) == 1
+    assert service.chain[0].name == "groq"
+    assert service.chain[0].model == "openai/gpt-oss-120b"
+    assert service.chain[0].api_key == "gsk-configured-key"
+
+
 @pytest.mark.parametrize("status,retryable,kind", [(401, False, "auth"), (404, False, "model"), (400, False, "bad_request"),
                                                    (429, True, "rate_limit"), (503, True, "error")])
 async def test_http_status_classification(status, retryable, kind):
@@ -315,8 +411,10 @@ def test_cost_estimate_matches_published_rates():
     assert estimate_cost("openai", "gpt-6-luna", c) == pytest.approx(0.60)
     assert estimate_cost("gemini", "gemini-3.5-flash-lite", c) == pytest.approx(2.80)
     assert estimate_cost("anthropic", "claude-sonnet-5-5", c) == pytest.approx(12.0)
+    assert estimate_cost("groq", "openai/gpt-oss-120b", c) == pytest.approx(0.75)
     assert estimate_cost("openai", "unknown-model", c) is None
     assert ("anthropic", "claude-haiku-5-5") in MODEL_PRICING
+    assert ("groq", "openai/gpt-oss-120b") in MODEL_PRICING
 
 
 def test_ttl_cache_expiry_and_lru(monkeypatch):
