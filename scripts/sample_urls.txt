@@ -1,0 +1,7 @@
+# One URL per line. Replace/extend with sites relevant to your demo (include at least one small local business).
+https://basecamp.com
+https://plausible.io
+https://www.zoho.com
+https://www.freshworks.com
+https://github.com
+https://pypi.org
