@@ -29,6 +29,7 @@ log = logging.getLogger("link_analysis.llm")
 T = TypeVar("T")
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -239,7 +240,44 @@ class GeminiProvider(BaseProvider):
                           resp.elapsed_ms)  # type: ignore[attr-defined]
 
 
-PROVIDERS: dict[str, type[BaseProvider]] = {"openai": OpenAIProvider, "anthropic": AnthropicProvider, "gemini": GeminiProvider}
+class GroqProvider(BaseProvider):
+    name = "groq"
+
+    async def complete(self, system: str, user: str, schema: dict) -> Completion:
+        body: dict = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "response_format": {"type": "json_object"},
+            "max_completion_tokens": self.settings.llm_max_output_tokens,
+        }
+        resp = await self._post(GROQ_URL, {"Authorization": f"Bearer {self.api_key}"}, body)
+        try:
+            data = resp.json()
+            choice = data["choices"][0]
+            text = choice["message"].get("content") or ""
+        except (KeyError, IndexError, TypeError, ValueError):
+            raise LLMProviderError("Groq returned an unexpected response shape.", retryable=True) from None
+        if choice.get("finish_reason") == "length":
+            raise StructuredOutputError("model output was truncated (raise LLM_MAX_OUTPUT_TOKENS)")
+        if not text.strip():
+            raise StructuredOutputError("Groq returned empty response content.")
+        usage = data.get("usage") or {}
+        cached = ((usage.get("prompt_tokens_details") or {}).get("cached_tokens")) or 0
+        return Completion(
+            text,
+            max((usage.get("prompt_tokens") or 0) - cached, 0),
+            cached,
+            usage.get("completion_tokens") or 0,
+            resp.elapsed_ms,
+        )  # type: ignore[attr-defined]
+
+
+PROVIDERS: dict[str, type[BaseProvider]] = {
+    "openai": OpenAIProvider,
+    "anthropic": AnthropicProvider,
+    "gemini": GeminiProvider,
+    "groq": GroqProvider,
+}
 
 
 # ---------------------------------------------------------------- service
