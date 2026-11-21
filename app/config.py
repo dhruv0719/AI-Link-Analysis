@@ -7,12 +7,13 @@ from typing import Literal, Optional
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Provider = Literal["openai", "anthropic", "gemini"]
+Provider = Literal["openai", "anthropic", "gemini", "groq"]
 
 DEFAULT_MODELS: dict[str, str] = {
     "openai": "gpt-6-luna",
     "anthropic": "claude-haiku-5-5",
     "gemini": "gemini-3.5-flash-lite",
+    "groq": "openai/gpt-oss-120b",
 }
 
 # USD per 1M tokens: (input, output, cached_input). List prices checked 2026-11-21
@@ -28,6 +29,7 @@ MODEL_PRICING: dict[tuple[str, str], tuple[float, float, float]] = {
     ("gemini", "gemini-3.1-flash-lite"): (0.25, 1.50, 0.025),
     # Introductory price, doubles on 2027-01-01.
     ("gemini", "gemini-3.8-flash"): (0.75, 3.75, 0.075),
+    ("groq", "openai/gpt-oss-120b"): (0.15, 0.60, 0.075),
 }
 
 
@@ -42,6 +44,7 @@ class Settings(BaseSettings):
     openai_api_key: Optional[SecretStr] = None
     anthropic_api_key: Optional[SecretStr] = None
     gemini_api_key: Optional[SecretStr] = None
+    groq_api_key: Optional[SecretStr] = None
     openai_reasoning_effort: Optional[str] = "low"
     gemini_thinking_level: Optional[str] = None
     llm_max_output_tokens: int = 8000
@@ -81,6 +84,7 @@ class Settings(BaseSettings):
             "openai": self.openai_api_key,
             "anthropic": self.anthropic_api_key,
             "gemini": self.gemini_api_key,
+            "groq": self.groq_api_key,
         }[provider]
         return secret.get_secret_value() if secret else None
 
