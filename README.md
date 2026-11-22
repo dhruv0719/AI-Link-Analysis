@@ -155,7 +155,7 @@ flowchart TD
 ### Windows Setup (PowerShell)
 ```powershell
 # 1. Clone repository
-git clone https://github.com/your-username/ai-link-analysis.git
+git clone https://github.com/dhruv0719/ai-link-analysis.git
 cd ai-link-analysis
 
 # 2. Create and activate virtual environment
@@ -176,7 +176,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 4000 --reload
 ### Linux / macOS Setup (Bash)
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-username/ai-link-analysis.git
+git clone https://github.com/dhruv0719/ai-link-analysis.git
 cd ai-link-analysis
 
 # 2. Create and activate virtual environment
