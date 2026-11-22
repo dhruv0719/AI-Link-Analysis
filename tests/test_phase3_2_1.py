@@ -367,3 +367,212 @@ def test_jay_jagle_all_services_ground_without_false_negatives():
     grounded_aud = ground_target_audience(audience, pages)
     assert grounded_aud.geographic_focus_provenance == "website_verified"
     assert len(grounded_aud.geographic_focus_evidence) == 1
+    # Evidence source_url must match actual fetched page URL
+    assert grounded_aud.geographic_focus_evidence[0].source_url == "https://www.jayjagleinnovations.com/contact"
+
+
+# =============================================================================
+# URL Matching Safety & Collision Prevention Tests (Review Requirements)
+# =============================================================================
+
+def test_simultaneous_apex_and_www_pages_no_collision():
+    """Requirement 1 & 6: Test simultaneous fetched pages at example.com and www.example.com
+    containing different text without collisions or cross-page attribution.
+    """
+    page_apex = PageContent(
+        url="https://example.com/",
+        title="Apex Homepage",
+        blocks=["This statement appears exclusively on the apex domain homepage."],
+    )
+    page_www = PageContent(
+        url="https://www.example.com/",
+        title="WWW Homepage",
+        blocks=["This statement appears exclusively on the www subdomain homepage."],
+    )
+    pages = [page_apex, page_www]
+
+    # 1. Exact apex match succeeds and returns apex URL
+    ev_apex = Evidence(
+        quote="This statement appears exclusively on the apex domain homepage.",
+        source_url="https://example.com/",
+    )
+    assert validate_evidence(ev_apex, pages) is True
+    matched_apex = find_matching_page("https://example.com/", pages)
+    assert matched_apex is not None and matched_apex.url == "https://example.com/"
+
+    # 2. Exact www match succeeds and returns www URL
+    ev_www = Evidence(
+        quote="This statement appears exclusively on the www subdomain homepage.",
+        source_url="https://www.example.com/",
+    )
+    assert validate_evidence(ev_www, pages) is True
+    matched_www = find_matching_page("https://www.example.com/", pages)
+    assert matched_www is not None and matched_www.url == "https://www.example.com/"
+
+    # 3. Cross-attribution must fail: quote on apex cannot be verified against www URL
+    ev_cross_1 = Evidence(
+        quote="This statement appears exclusively on the apex domain homepage.",
+        source_url="https://www.example.com/",
+    )
+    assert validate_evidence(ev_cross_1, pages) is False
+
+    # 4. Cross-attribution must fail: quote on www cannot be verified against apex URL
+    ev_cross_2 = Evidence(
+        quote="This statement appears exclusively on the www subdomain homepage.",
+        source_url="https://example.com/",
+    )
+    assert validate_evidence(ev_cross_2, pages) is False
+
+
+def test_pages_with_same_path_different_queries_no_collision():
+    """Requirement 2 & 6: Test two fetched pages with the same path but different meaningful
+    query parameters without collisions or cross-page attribution.
+    """
+    page_shoes = PageContent(
+        url="https://example.com/shop?category=shoes",
+        title="Shoe Catalog",
+        blocks=["Exclusive running shoes and sports footwear collection."],
+    )
+    page_hats = PageContent(
+        url="https://example.com/shop?category=hats",
+        title="Hat Catalog",
+        blocks=["Exclusive baseball caps and winter beanies collection."],
+    )
+    pages = [page_shoes, page_hats]
+
+    # 1. Shoes query correctly verifies against shoes page
+    ev_shoes = Evidence(
+        quote="Exclusive running shoes and sports footwear collection.",
+        source_url="https://example.com/shop?category=shoes",
+    )
+    assert validate_evidence(ev_shoes, pages) is True
+    matched_shoes = find_matching_page("https://example.com/shop?category=shoes", pages)
+    assert matched_shoes is not None and matched_shoes.url == "https://example.com/shop?category=shoes"
+
+    # 2. Hats query correctly verifies against hats page
+    ev_hats = Evidence(
+        quote="Exclusive baseball caps and winter beanies collection.",
+        source_url="https://example.com/shop?category=hats",
+    )
+    assert validate_evidence(ev_hats, pages) is True
+    matched_hats = find_matching_page("https://example.com/shop?category=hats", pages)
+    assert matched_hats is not None and matched_hats.url == "https://example.com/shop?category=hats"
+
+    # 3. Query mismatch cross-attribution must fail
+    ev_cross = Evidence(
+        quote="Exclusive running shoes and sports footwear collection.",
+        source_url="https://example.com/shop?category=hats",  # Wrong query param!
+    )
+    assert validate_evidence(ev_cross, pages) is False
+
+    # 4. Ambiguous query-less target must fail closed (cannot guess which query page was meant)
+    matched_ambiguous = find_matching_page("https://example.com/shop", pages)
+    assert matched_ambiguous is None
+
+    ev_ambiguous = Evidence(
+        quote="Exclusive running shoes and sports footwear collection.",
+        source_url="https://example.com/shop",
+    )
+    assert validate_evidence(ev_ambiguous, pages) is False
+
+
+def test_fragment_normalization_strips_fragments_from_evidence():
+    """Requirement 3 & 5: Test that fragment normalization ignores browser anchors and
+    returns verified evidence identifying the actual fetched page URL without fragments.
+    """
+    page_pricing = PageContent(
+        url="https://example.com/pricing",
+        title="Pricing Plans",
+        blocks=["The Pro plan is $49 per month with unlimited API requests."],
+    )
+    pages = [page_pricing]
+
+    service = Service(
+        name="Pro Plan",
+        description="Unlimited API requests plan.",
+        target_industry="Developers",
+        target_customer="Tech Teams",
+        main_benefit="Scalability",
+        source="website",
+        evidence=[
+            Evidence(
+                quote="The Pro plan is $49 per month with unlimited API requests.",
+                source_url="https://example.com/pricing#pro-tier-annual",  # Includes anchor fragment
+            )
+        ],
+    )
+    grounded = ground_service(service, pages)
+    assert grounded.provenance == "website_verified"
+    assert len(grounded.evidence) == 1
+    # Actual fetched page URL must be returned, stripped of anchor fragment
+    assert grounded.evidence[0].source_url == "https://example.com/pricing"
+
+
+def test_legitimate_redirect_matching_via_aliases_and_fallback():
+    """Requirement 4 & 5: Test a legitimate redirect from requested non-www to actual www URL
+    using recorded PageContent.aliases and unambiguous fallback.
+    """
+    # Simulate fetcher recording the redirect chain
+    page_www = PageContent(
+        url="https://www.example.com/",
+        aliases=["https://example.com", "https://example.com/"],
+        title="Example Homepage",
+        blocks=["Enterprise infrastructure software solutions."],
+    )
+    pages = [page_www]
+
+    # 1. Alias lookup matches the landed page
+    matched_via_alias = find_matching_page("https://example.com", pages)
+    assert matched_via_alias is not None
+    assert matched_via_alias.url == "https://www.example.com/"
+
+    # 2. Grounded service evidence canonicalizes from requested non-www to actual www URL
+    service = Service(
+        name="Enterprise Infrastructure",
+        description="Software solutions.",
+        target_industry="Enterprise",
+        target_customer="CTOs",
+        main_benefit="Stability",
+        source="website",
+        evidence=[
+            Evidence(
+                quote="Enterprise infrastructure software solutions.",
+                source_url="https://example.com",  # Non-www requested URL
+            )
+        ],
+    )
+    grounded = ground_service(service, pages)
+    assert grounded.provenance == "website_verified"
+    assert len(grounded.evidence) == 1
+    # Evidence source_url must identify the actual fetched page URL, not the requested alias
+    assert grounded.evidence[0].source_url == "https://www.example.com/"
+
+
+def test_relative_url_evidence_canonicalizes_to_actual_fetched_url():
+    """Requirement 5: Test that relative evidence URLs (e.g. '/contact') are canonicalized
+    to the actual fetched page URL rather than remaining relative.
+    """
+    home = PageContent(url="https://www.example.com/", title="Home")
+    contact = PageContent(
+        url="https://www.example.com/contact",
+        title="Contact",
+        blocks=["Visit our headquarters at 100 Main Street, Suite 400, Chicago, IL."],
+    )
+    pages = [home, contact]
+
+    audience = TargetAudience(
+        primary_audience=["Business clients"],
+        geographic_focus="Chicago, IL",
+        geographic_focus_evidence=[
+            Evidence(
+                quote="100 Main Street, Suite 400, Chicago, IL.",
+                source_url="/contact",  # Relative URL
+            )
+        ],
+    )
+    grounded = ground_target_audience(audience, pages)
+    assert grounded.geographic_focus_provenance == "website_verified"
+    assert len(grounded.geographic_focus_evidence) == 1
+    # Canonicalized to full actual fetched page URL
+    assert grounded.geographic_focus_evidence[0].source_url == "https://www.example.com/contact"
+
