@@ -192,6 +192,7 @@ class FetchedPage:
     content_type: str
     elapsed_ms: int
     truncated: bool = False
+    redirect_chain: list[str] = field(default_factory=list)
 
 
 class SafeFetcher:
@@ -221,6 +222,7 @@ class SafeFetcher:
         timeout = timeout or s.fetch_timeout_seconds
         started = time.perf_counter()
         current = normalize_url(url, allow_private=s.allow_private_urls)
+        redirect_chain: list[str] = [current]
 
         for _hop in range(s.max_redirects + 1):
             parts = urlsplit(current)
@@ -277,6 +279,8 @@ class SafeFetcher:
                             # Re-validate the next hop (scheme, host, resolved IPs) on the next loop turn.
                             next_url = urljoin(current, location)
                             current = normalize_url(next_url, allow_private=s.allow_private_urls)
+                            if current not in redirect_chain:
+                                redirect_chain.append(current)
                             continue
 
                         self._raise_for_status(resp.status)
@@ -302,6 +306,7 @@ class SafeFetcher:
                             ctype,
                             int((time.perf_counter() - started) * 1000),
                             truncated,
+                            redirect_chain=redirect_chain,
                         )
             except AppError:
                 raise
@@ -334,6 +339,7 @@ class SafeFetcher:
 @dataclass
 class PageContent:
     url: str
+    aliases: list[str] = field(default_factory=list)
     title: str | None = None
     meta_description: str | None = None
     meta_keywords: str | None = None
@@ -503,13 +509,13 @@ def _extract_footer_context(soup: BeautifulSoup, max_chars: int = 500) -> str | 
     return combined or None
 
 
-def parse_page(body: bytes, url: str, *, truncated: bool = False) -> PageContent:
+def parse_page(body: bytes, url: str, *, truncated: bool = False, aliases: list[str] | None = None) -> PageContent:
     try:
         soup = BeautifulSoup(body, "lxml")
     except Exception:  # pragma: no cover - lxml missing/odd markup
         soup = BeautifulSoup(body, "html.parser")
 
-    page = PageContent(url=url, truncated_source=truncated)
+    page = PageContent(url=url, aliases=aliases or [], truncated_source=truncated)
     page.title = _clean(soup.title.get_text()) if soup.title and soup.title.get_text() else None
     page.meta_description = _meta(soup, name=re.compile(r"^description$", re.I))
     page.meta_keywords = _meta(soup, name=re.compile(r"^keywords$", re.I))
@@ -740,7 +746,7 @@ class WebsiteExtractor:
     async def extract_site(self, url: str) -> SiteContent:
         started = time.perf_counter()
         home_fetch = await self.fetcher.fetch(url)
-        home = parse_page(home_fetch.body, home_fetch.url, truncated=home_fetch.truncated)
+        home = parse_page(home_fetch.body, home_fetch.url, truncated=home_fetch.truncated, aliases=home_fetch.redirect_chain)
         pages = [home]
 
         extra_urls = pick_key_pages(home, self.settings.max_extra_pages) if self.settings.max_extra_pages > 0 else []
@@ -749,7 +755,7 @@ class WebsiteExtractor:
                 *(self.fetcher.fetch(u, max_bytes=1_200_000, timeout=8) for u in extra_urls), return_exceptions=True)
             for u, res in zip(extra_urls, results):
                 if isinstance(res, FetchedPage):
-                    page = parse_page(res.body, res.url, truncated=res.truncated)
+                    page = parse_page(res.body, res.url, truncated=res.truncated, aliases=res.redirect_chain)
                     if page.word_count >= 30:
                         pages.append(page)
                 else:
