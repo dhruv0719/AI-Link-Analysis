@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Literal, Optional, Self
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -24,6 +25,22 @@ ContentType = Literal[
 Verification = Literal[
     "verified_live_site", "live_site_name_not_matched", "unreachable",
     "invalid_website_url", "no_website_provided", "not_checked",
+]
+
+RelevanceStatus = Literal[
+    "likely_relevant",
+    "possible",
+    "low_relevance",
+    "category_mismatch",
+    "insufficient_evidence",
+    "not_checked",
+]
+
+CompetitorType = Literal[
+    "direct",
+    "indirect",
+    "substitute",
+    "unknown",
 ]
 
 
@@ -149,12 +166,98 @@ class CompetitorAnalysisLLM(_Base):
         return self
 
 
+_QUERY_STOP_WORDS = {
+    "a", "an", "the", "and", "or", "in", "on", "at", "by", "for", "with", "about",
+    "to", "from", "of", "best", "top", "cheap", "affordable", "friendly", "near",
+    "local", "online", "good", "great", "my", "your",
+}
+
+
+def _derive_platform_variant(
+    platform: Platform,
+    base_query: str,
+    *,
+    brand_name: str = "",
+    category: str = "",
+    location: str | None = None,
+) -> PlatformQueryVariant:
+    import re
+    clean_q = base_query.strip()
+    words = [w for w in re.findall(r"[A-Za-z0-9]+", clean_q) if len(w) >= 2]
+    substantive = [w for w in words if w.lower() not in _QUERY_STOP_WORDS] or words
+
+    # Extract brand tokens to avoid meaningless brand-only hashtags on Instagram
+    brand_tokens = {w.lower() for w in re.findall(r"[A-Za-z0-9]+", brand_name)} if brand_name else set()
+
+    if platform == "Google":
+        return PlatformQueryVariant(platform="Google", query=clean_q, format="search_phrase")
+    elif platform == "Instagram":
+        # Prefer service, category, and location terms; avoid brand-only hashtags
+        non_brand = [w for w in substantive if w.lower() not in brand_tokens]
+        chosen = non_brand if non_brand else substantive
+
+        # If only brand tokens were present and category is known, incorporate category tokens
+        if not non_brand and category:
+            cat_words = [w for w in re.findall(r"[A-Za-z0-9]+", category) if w.lower() not in _QUERY_STOP_WORDS]
+            if cat_words:
+                chosen = cat_words
+
+        compound = "".join(w.capitalize() for w in chosen[:3])
+        if len(chosen) >= 3:
+            category_tag = f"#{chosen[-2].capitalize()}{chosen[-1].capitalize()}"
+            ht_query = f"#{compound} {category_tag}"
+        else:
+            ht_query = f"#{compound}" if compound else f"#{clean_q.replace(' ', '')}"
+        return PlatformQueryVariant(platform="Instagram", query=ht_query, format="hashtag")
+    elif platform == "Facebook":
+        lower_q = clean_q.lower()
+        if "recommendation" in lower_q or "reviews" in lower_q:
+            fb_q = clean_q
+        elif any(loc_kw in lower_q for loc_kw in ("local", "near me", "nearby", "community", "group")):
+            fb_q = f"{clean_q} recommendations"
+        elif any(term in lower_q for term in ("agency", "studio", "service", "services", "company", "clinic", "dentist", "plumber")):
+            fb_q = f"{clean_q} recommendations local community"
+        else:
+            fb_q = f"{clean_q} recommendations local"
+        return PlatformQueryVariant(platform="Facebook", query=fb_q, format="community_search")
+    elif platform == "LinkedIn":
+        lower_q = clean_q.lower()
+        if "vendor" in lower_q or "provider" in lower_q:
+            li_q = clean_q
+        elif any(b2b_kw in lower_q for b2b_kw in ("b2b", "professional", "enterprise", "agency", "software", "saas", "solutions")):
+            li_q = f"{clean_q} vendor"
+        else:
+            li_q = f"{clean_q} professional vendor"
+        return PlatformQueryVariant(platform="LinkedIn", query=li_q, format="b2b_keyword")
+    elif platform == "X":
+        if substantive:
+            tag = f"#{''.join(w.capitalize() for w in substantive[:2])}"
+            x_query = f"{clean_q} {tag}"
+        else:
+            x_query = clean_q
+        return PlatformQueryVariant(platform="X", query=x_query.strip(), format="topic_discussion")
+    return PlatformQueryVariant(platform=platform, query=clean_q, format="search_phrase")
+
+
+class PlatformQueryVariant(_Base):
+    platform: Platform
+    query: str
+    format: Optional[str] = Field(None, description="e.g. 'search_phrase', 'hashtag', 'community_search', 'b2b_keyword', 'topic_discussion'")
+
+    @field_validator("platform", mode="before")
+    @classmethod
+    def _normalise_platform(cls, v):
+        mapped = _PLATFORM_ALIASES.get(str(v).strip().lower())
+        return mapped or str(v)
+
+
 class SearchQuery(_Base):
     query: str
     platforms: list[Platform]
     intent: str
     business_relevance: str = ""
     target_audience: str = ""
+    platform_queries: list[PlatformQueryVariant] = Field(default_factory=list)
     provenance: Provenance = "recommendation"
 
     @field_validator("platforms", mode="before")
@@ -170,6 +273,27 @@ class SearchQuery(_Base):
         if not out:
             raise ValueError("at least one supported platform (Google, Facebook, Instagram, LinkedIn, X) is required")
         return out
+
+    @model_validator(mode="after")
+    def _ensure_platform_queries(self) -> Self:
+        if not self.platform_queries and self.platforms:
+            self.platform_queries = [_derive_platform_variant(p, self.query) for p in self.platforms]
+            return self
+
+        # Keep platforms and platform_queries strictly consistent
+        for pq in self.platform_queries:
+            if pq.platform not in self.platforms:
+                self.platforms.append(pq.platform)
+
+        existing = {pq.platform: pq for pq in self.platform_queries}
+        aligned_pqs: list[PlatformQueryVariant] = []
+        for p in self.platforms:
+            if p in existing:
+                aligned_pqs.append(existing[p])
+            else:
+                aligned_pqs.append(_derive_platform_variant(p, self.query))
+        self.platform_queries = aligned_pqs
+        return self
 
 
 class SupportingContent(_Base):
@@ -276,18 +400,64 @@ class LLMAnalysis(_Base):
 
 
 # ------------------------------------------------------------------ response models (LLM + server facts)
+class CompetitorRelevance(_Base):
+    status: RelevanceStatus = "not_checked"
+    competitor_type: CompetitorType = "unknown"
+    signals: list[str] = Field(
+        default_factory=list,
+        description="Observed market overlap signals: category_overlap, offering_overlap, audience_overlap, geographic_overlap",
+    )
+    explanation: str = Field(
+        "",
+        description="Analytical explanation of candidate relevance based on actual fetched competitor website content.",
+    )
+    evidence: list[Evidence] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Excerpts from the competitor's fetched website supporting the assessment.",
+    )
+
+
 class Competitor(LLMCompetitor):
     source: Literal["ai_suggested"] = "ai_suggested"
     verification: Verification = "not_checked"
     verified_page_title: Optional[str] = None
+    relevance: CompetitorRelevance = Field(default_factory=CompetitorRelevance)
 
 
 class CompetitorAnalysis(CompetitorAnalysisLLM):
     competitors: list[Competitor] = Field(default_factory=list)
     research_note: str = (
-        "Competitors are AI-generated suggestions, not search-engine research. 'verification' only "
-        "shows whether the suggested website is live and mentions the competitor's name."
+        "Competitors are AI-generated suggestions, not search-engine research. 'verification' "
+        "indicates whether the suggested website is live and mentions the competitor's name. 'relevance' "
+        "evaluates category, offering, audience, and geographic overlap based on actual fetched page content."
     )
+
+    @model_validator(mode="after")
+    def _align_comparison(self) -> Self:
+        # Only candidates evaluated as likely_relevant or possible are eligible for direct comparison
+        eligible_names = {
+            c.name.strip().lower()
+            for c in self.competitors
+            if getattr(c, "relevance", None) is not None
+            and c.relevance.status in ("likely_relevant", "possible")
+        }
+        eligible_hosts = {
+            (urlsplit(c.website).hostname or "").lower().removeprefix("www.")
+            for c in self.competitors
+            if c.website
+            and getattr(c, "relevance", None) is not None
+            and c.relevance.status in ("likely_relevant", "possible")
+        }
+        self.comparison = [
+            c for c in self.comparison
+            if c.role == "your_brand"
+            or (
+                c.brand_name.strip().lower() in eligible_names
+                or any(h and h in c.brand_name.strip().lower() for h in eligible_hosts)
+            )
+        ]
+        return self
 
 
 class SeoCheck(BaseModel):
