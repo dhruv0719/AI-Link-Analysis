@@ -94,9 +94,9 @@ def canonicalize_url(u: str) -> str:
     - Strips fragment (#...).
     - Standardizes scheme and host to lowercase.
     - Strips default ports (:80 for http, :443 for https).
-    - Normalizes path: redundant slashes removed, trailing slash stripped (unless root '/').
-    - Canonicalizes query string with sorted key-value pairs (preserving parameters).
-    - Preserves domain and www prefix (does NOT strip www. or drop query strings).
+    - Preserves exact path structure (/pricing and /pricing/ remain distinct to avoid collisions).
+    - Canonicalizes query string with sorted key-value pairs (preserving repeated keys).
+    - Preserves domain and www prefix.
     """
     if not u or not u.strip():
         return ""
@@ -111,11 +111,10 @@ def canonicalize_url(u: str) -> str:
             netloc = host
 
     path = parsed.path or "/"
-    if path != "/" and path.endswith("/"):
-        path = path.rstrip("/")
 
     query = ""
     if parsed.query:
+        # parse_qsl preserves repeated keys; sorted sorts by (key, value) tuples
         params = sorted(parse_qsl(parsed.query, keep_blank_values=True))
         query = urlencode(params)
 
@@ -127,11 +126,11 @@ def find_matching_page(source_url: str, pages: list[PageContent]) -> PageContent
 
     Guarantees:
     - Never collides between two distinct fetched pages (e.g. example.com vs www.example.com,
-      or /products?category=shoes vs /products?category=hats).
+      /pricing vs /pricing/, or /products?category=shoes vs /products?category=hats).
     - Resolves relative URLs against the base page (pages[0].url).
     - Matches recorded redirect aliases (from PageContent.aliases) unambiguously.
-    - Allows unambiguous www-prefix mismatch ONLY when exact parameters and path match
-      and exactly one page in the fetched pages set matches (fails closed if ambiguous).
+    - Allows unambiguous www-prefix or trailing-slash mismatch ONLY when exact parameters
+      match and exactly one page in the fetched pages set matches (fails closed if ambiguous).
     - Ignores client-side fragments (#...) deterministically.
     """
     if not source_url or not pages:
@@ -163,27 +162,24 @@ def find_matching_page(source_url: str, pages: list[PageContent]) -> PageContent
         # Ambiguous alias collision - refuse to guess
         return None
 
-    # Parse target components for relaxed unambiguous fallback
+    # Parse target components for relaxed unambiguous fallbacks
     target_parsed = urlparse(target_canon)
     target_host = target_parsed.hostname or ""
     target_path = target_parsed.path or "/"
     target_query = target_parsed.query
 
     # Tier 3: Unambiguous www-prefix mismatch (only if path and query match EXACTLY)
-    # Allows matching when the LLM outputs non-www apex but page is www (or vice versa),
-    # provided there is NO ambiguity and NO collision.
     target_host_apex = target_host.removeprefix("www.")
     www_matches: list[PageContent] = []
     for p in pages:
         p_canon = canonicalize_url(p.url)
         p_parsed = urlparse(p_canon)
-        p_host = p_parsed.hostname or ""
-        p_host_apex = p_host.removeprefix("www.")
+        p_host = (p_parsed.hostname or "").removeprefix("www.")
         p_path = p_parsed.path or "/"
         p_query = p_parsed.query
 
         if (
-            target_host_apex == p_host_apex
+            target_host_apex == p_host
             and target_path == p_path
             and target_query == p_query
         ):
@@ -191,6 +187,32 @@ def find_matching_page(source_url: str, pages: list[PageContent]) -> PageContent
 
     if len(www_matches) == 1:
         return www_matches[0]
+
+    # Tier 4: Unambiguous trailing-slash mismatch
+    # (e.g. target is '/pricing' and pages has only '/pricing/', or vice versa)
+    # ONLY matches if:
+    # 1. target_host matches page host
+    # 2. target_query matches page query
+    # 3. Path differs only by trailing slash
+    # 4. EXACTLY ONE candidate in pages matches (if both exist, count > 1 -> fails closed!)
+    slash_alt_path = target_path[:-1] if target_path.endswith("/") and target_path != "/" else (target_path + "/")
+    slash_matches: list[PageContent] = []
+    for p in pages:
+        p_canon = canonicalize_url(p.url)
+        p_parsed = urlparse(p_canon)
+        p_host = (p_parsed.hostname or "").removeprefix("www.")
+        p_path = p_parsed.path or "/"
+        p_query = p_parsed.query
+
+        if (
+            target_host_apex == p_host
+            and slash_alt_path == p_path
+            and target_query == p_query
+        ):
+            slash_matches.append(p)
+
+    if len(slash_matches) == 1:
+        return slash_matches[0]
 
     return None
 
@@ -240,6 +262,70 @@ def validate_evidence(ev: Evidence, pages: list[PageContent]) -> bool:
     return verify_and_canonicalize_evidence(ev, pages) is not None
 
 
+def is_service_name_supported_by_quote(service_name: str, quote: str) -> bool:
+    """Validate whether an evidence quotation establishes the specific service name.
+
+    Conservative deterministic name-to-evidence validation:
+    - Normalizes both strings.
+    - Checks whether the service name (or its core noun phrase) appears in the quote as a phrase.
+    - Allows 'web' and 'website' equivalence.
+    - Handles generic service suffixes like 'services', 'solutions', 'offerings'.
+    - Rejects broad or unrelated quotations (e.g. 'Business Registration' supported only
+      by 'Brand Trademark Registration').
+    """
+    if not service_name or not quote:
+        return False
+
+    norm_name = normalize_text_for_matching(service_name).strip(_STRIP_PUNCT)
+    norm_quote = normalize_text_for_matching(quote).strip(_STRIP_PUNCT)
+
+    if not norm_name or not norm_quote:
+        return False
+
+    # 1. Exact match
+    if norm_name == norm_quote:
+        return True
+
+    # Web / Website equivalence
+    norm_name_web = re.sub(r"\bwebsites?\b", "web", norm_name)
+    norm_quote_web = re.sub(r"\bwebsites?\b", "web", norm_quote)
+    if norm_name_web == norm_quote_web:
+        return True
+
+    # 2. Service name is contained as a word-bounded phrase in the quote
+    # e.g. quote="We provide custom website development for businesses", name="website development"
+    pattern = r"(?:\b|^)" + re.escape(norm_name) + r"(?:\b|$)"
+    if re.search(pattern, norm_quote):
+        return True
+
+    pattern_web = r"(?:\b|^)" + re.escape(norm_name_web) + r"(?:\b|$)"
+    if re.search(pattern_web, norm_quote_web):
+        return True
+
+    # 3. Handle common generic service descriptor suffixes
+    # e.g. name="Printing Services", quote="High quality printing for your brand"
+    generic_suffixes = ("services", "service", "solutions", "solution", "offerings", "offering")
+    core_name = norm_name
+    for sfx in generic_suffixes:
+        if core_name.endswith(" " + sfx):
+            core_name = core_name[:-len(sfx)-1].strip()
+            break
+
+    if len(core_name) >= 4:
+        core_pattern = r"(?:\b|^)" + re.escape(core_name) + r"(?:\b|$)"
+        if re.search(core_pattern, norm_quote):
+            return True
+
+    # 4. Heading quote contained in service name (e.g. quote="Logo Design", name="Professional Logo Design")
+    # Only if quote is at least 2 words or >= 8 chars to avoid trivial single-word overlaps
+    quote_words = norm_quote.split()
+    if len(quote_words) >= 2 or len(norm_quote) >= 8:
+        if re.search(r"(?:\b|^)" + re.escape(norm_quote) + r"(?:\b|$)", norm_name):
+            return True
+
+    return False
+
+
 def is_generic_boilerplate_quote(quote: str, brand_name: str | None = None) -> bool:
     """Check if quote is generic legal/navigational boilerplate lacking brand substance.
 
@@ -262,72 +348,183 @@ def is_generic_boilerplate_quote(quote: str, brand_name: str | None = None) -> b
     return True
 
 
-def is_brand_name_verified(brand_name: str, pages: list[PageContent]) -> bool:
-    """Verify whether the brand name is grounded in the website pages (title, OG, or corpus)."""
+def find_brand_name_evidence(brand_name: str, pages: list[PageContent]) -> list[Evidence]:
+    """Find inspectable evidence verifying the brand name from page metadata/content."""
     if not brand_name or not pages:
-        return False
+        return []
     norm_name = normalize_text_for_matching(brand_name)
     if len(norm_name) < 2:
+        return []
+
+    ev_list: list[Evidence] = []
+    for p in pages:
+        # 1. OpenGraph site_name
+        og_site = p.og.get("og:site_name", "")
+        if og_site:
+            norm_og = normalize_text_for_matching(og_site)
+            if norm_name in norm_og or norm_og in norm_name:
+                ev_list.append(Evidence(quote=og_site, source_url=p.url))
+                break
+
+        # 2. Page title
+        if p.title:
+            norm_title = normalize_text_for_matching(p.title)
+            if re.search(r"(?:\b|^)" + re.escape(norm_name) + r"(?:\b|$)", norm_title):
+                ev_list.append(Evidence(quote=p.title, source_url=p.url))
+                break
+
+        # 3. OpenGraph title
+        og_title = p.og.get("og:title", "")
+        if og_title:
+            norm_og_t = normalize_text_for_matching(og_title)
+            if re.search(r"(?:\b|^)" + re.escape(norm_name) + r"(?:\b|$)", norm_og_t):
+                ev_list.append(Evidence(quote=og_title, source_url=p.url))
+                break
+
+        # 4. H1 or Headings
+        found_heading = False
+        for h in p.h1 + p.headings:
+            norm_h = normalize_text_for_matching(h)
+            if re.search(r"(?:\b|^)" + re.escape(norm_name) + r"(?:\b|$)", norm_h):
+                ev_list.append(Evidence(quote=h, source_url=p.url))
+                found_heading = True
+                break
+        if found_heading:
+            break
+
+        # 5. Blocks
+        found_block = False
+        for b in p.blocks:
+            norm_b = normalize_text_for_matching(b)
+            if re.search(r"(?:\b|^)" + re.escape(norm_name) + r"(?:\b|$)", norm_b):
+                clean_b = re.sub(r"^#+\s*", "", b).strip()
+                ev_list.append(Evidence(quote=clean_b[:200], source_url=p.url))
+                found_block = True
+                break
+        if found_block:
+            break
+
+    return ev_list
+
+
+def is_brand_name_verified(brand_name: str, pages: list[PageContent]) -> bool:
+    """Verify whether the brand name is grounded in the website pages."""
+    return len(find_brand_name_evidence(brand_name, pages)) > 0
+
+
+def is_summary_fully_supported(summary: str, evidence: list[Evidence]) -> bool:
+    """Validate whether an entire brand summary is supported by the evidence.
+
+    - If the summary makes multiple distinct claims or lists offerings, all material
+      claims must be supported across the evidence quotations.
+    - If any material claim is missing from the evidence, returns False.
+    - If evidence is empty, returns False.
+    """
+    if not summary or not evidence:
         return False
 
-    for p in pages:
-        og_site = normalize_text_for_matching(p.og.get("og:site_name", ""))
-        if norm_name in og_site or (og_site and og_site in norm_name):
-            return True
-        og_title = normalize_text_for_matching(p.og.get("og:title", ""))
-        if norm_name in og_title:
+    norm_summary = normalize_text_for_matching(summary)
+    evidence_text = " ".join(normalize_text_for_matching(ev.quote) for ev in evidence)
+
+    if not evidence_text:
+        return False
+
+    # 1. Full verbatim match
+    if norm_summary in evidence_text:
+        return True
+
+    # 2. Check for multi-claim list items in summary (e.g. "specializes in A, B, C, D and E")
+    if "," in summary:
+        raw_items = re.split(r"[,;]|\b(?:and|as well as|along with)\b", summary, flags=re.I)
+        cleaned_items: list[str] = []
+        for it in raw_items:
+            norm_it = normalize_text_for_matching(it).strip(_STRIP_PUNCT)
+            norm_it = re.sub(
+                r"^(?:(?:the|our|your|a|an)\s+)?(?:business|company|brand|agency|team|innovations|studio)?\s*"
+                r"(?:specializes in|provides|offers|includes|focuses on|delivers|excels in|services in|solutions for)?\s*",
+                "",
+                norm_it,
+            ).strip(_STRIP_PUNCT)
+            if len(norm_it) >= 5 and norm_it not in cleaned_items:
+                cleaned_items.append(norm_it)
+
+        if len(cleaned_items) >= 2:
+            # Multi-claim list: every item must be present in evidence_text
+            for item in cleaned_items:
+                item_words = item.split()
+                if len(item_words) >= 2:
+                    phrase_match = re.search(r"(?:\b|^)" + re.escape(item) + r"(?:\b|$)", evidence_text)
+                    if not phrase_match:
+                        core = " ".join(item_words[:2])
+                        if not re.search(r"(?:\b|^)" + re.escape(core) + r"(?:\b|$)", evidence_text):
+                            return False
+                else:
+                    if not re.search(r"(?:\b|^)" + re.escape(item) + r"(?:\b|$)", evidence_text):
+                        return False
             return True
 
-        title = normalize_text_for_matching(p.title)
-        if norm_name in title:
-            return True
-
-        corpus = normalize_text_for_matching(page_search_corpus(p))
-        if norm_name in corpus:
-            return True
-
-    return False
+    # 3. For single-claim summaries, check if the core statement is supported
+    summary_words = [w for w in norm_summary.split() if len(w) >= 4]
+    if not summary_words:
+        return False
+    matched_words = sum(1 for w in summary_words if re.search(r"\b" + re.escape(w) + r"\b", evidence_text))
+    return (matched_words / len(summary_words)) >= 0.5
 
 
 def ground_brand(brand: Brand, pages: list[PageContent]) -> Brand:
     """Validate brand evidence and set brand name, summary, and overall provenance.
 
-    Guarantees returned evidence objects point to the actual fetched page URL.
+    Guarantees:
+    - Verified brand name exposes inspectable evidence in name_evidence.
+    - If brand summary contains unsupported claims, summary_provenance is inferred.
+    - Overall brand provenance is website_verified ONLY if both name and summary are verified.
+    - Verified evidence objects point to actual fetched page URLs.
     """
-    name_verified = is_brand_name_verified(brand.name, pages)
-    name_prov: Provenance = "website_verified" if name_verified else "inferred"
+    name_evidence = find_brand_name_evidence(brand.name, pages)
+    name_prov: Provenance = "website_verified" if name_evidence else "inferred"
 
-    valid_ev: list[Evidence] = []
+    valid_summary_ev: list[Evidence] = []
     for ev in brand.evidence:
         canonical_ev = verify_and_canonicalize_evidence(ev, pages)
         if canonical_ev and not is_generic_boilerplate_quote(canonical_ev.quote, brand.name):
-            valid_ev.append(canonical_ev)
+            valid_summary_ev.append(canonical_ev)
 
-    summary_prov: Provenance = "website_verified" if valid_ev else "inferred"
-    overall_prov: Provenance = "website_verified" if (name_verified and valid_ev) else "inferred"
+    is_supported = is_summary_fully_supported(brand.summary, valid_summary_ev)
+    summary_prov: Provenance = "website_verified" if (valid_summary_ev and is_supported) else "inferred"
+
+    overall_prov: Provenance = "website_verified" if (name_prov == "website_verified" and summary_prov == "website_verified") else "inferred"
+
+    summary_evidence_out = valid_summary_ev[:2] if valid_summary_ev else []
 
     return brand.model_copy(update={
         "provenance": overall_prov,
         "name_provenance": name_prov,
+        "name_evidence": name_evidence[:2],
         "summary_provenance": summary_prov,
-        "evidence": valid_ev[:2],
+        "evidence": summary_evidence_out,
     })
 
 
 def ground_service(service: Service, pages: list[PageContent]) -> Service:
     """Validate a service's evidence and establish its factual provenance and description provenance.
 
-    - If source='website' and has valid evidence: retained as 'website' with provenance='website_verified'.
-    - If source='website' but lacks valid evidence: downgraded to 'inferred' with provenance='inferred'.
-    - If source='inferred': retained as 'inferred' with provenance='inferred'.
-    - description_provenance: 'website_verified' if the description is directly grounded in website text,
-      otherwise 'inferred'.
+    Guarantees:
+    - Service name must be supported by the actual quotation.
+    - If evidence does not establish the service name, provenance is downgraded to inferred.
+    - description_provenance is verified if the description appears verbatim in the page corpus.
     - Verified evidence objects point to the actual fetched page URL.
     """
+    # Verify quotation exists on fetched page
     valid_ev = [
         canonical_ev
         for ev in service.evidence
         if (canonical_ev := verify_and_canonicalize_evidence(ev, pages)) is not None
+    ]
+
+    # Verify that at least one quotation supports the service name
+    valid_name_ev = [
+        ev for ev in valid_ev
+        if is_service_name_supported_by_quote(service.name, ev.quote)
     ]
 
     desc_prov: Provenance = "inferred"
@@ -341,7 +538,7 @@ def ground_service(service: Service, pages: list[PageContent]) -> Service:
                     break
 
     if service.source == "website":
-        if valid_ev:
+        if valid_name_ev:
             return service.model_copy(update={
                 "source": "website",
                 "provenance": "website_verified",
@@ -349,7 +546,7 @@ def ground_service(service: Service, pages: list[PageContent]) -> Service:
                 "evidence": valid_ev[:2],
             })
         else:
-            log.info("downgrading service '%s' to inferred (no verified evidence)", service.name)
+            log.info("downgrading service '%s' to inferred (evidence does not support service name)", service.name)
             return service.model_copy(update={
                 "source": "inferred",
                 "provenance": "inferred",
@@ -360,8 +557,8 @@ def ground_service(service: Service, pages: list[PageContent]) -> Service:
         return service.model_copy(update={
             "source": "inferred",
             "provenance": "inferred",
-            "description_provenance": desc_prov if valid_ev else "inferred",
-            "evidence": valid_ev[:2] if valid_ev else [],
+            "description_provenance": desc_prov if valid_name_ev else "inferred",
+            "evidence": valid_ev[:2] if valid_name_ev else [],
         })
 
 
