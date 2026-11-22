@@ -509,37 +509,50 @@ python -m scripts.run_benchmark_8_categories --live
 
 ## 11. Evaluation & Benchmark Methodology (8 Categories)
 
-The benchmark framework ([`scripts/evaluator.py`](file:///d:/ai-link-analysis/scripts/evaluator.py)) objectively scores analysis quality across the **8 commercial categories** identified in [`docs/analysis_quality_audit.md`](file:///d:/ai-link-analysis/docs/analysis_quality_audit.md):
+The benchmark framework ([`scripts/evaluator.py`](file:///d:/ai-link-analysis/scripts/evaluator.py)) objectively assesses system performance across the **8 commercial categories** identified in [`docs/analysis_quality_audit.md`](file:///d:/ai-link-analysis/docs/analysis_quality_audit.md), with strict separation between **Operational Reliability** (infrastructure and provider boundaries) and **Analysis Quality** (scoring only successfully completed analyses).
 
-1. **SaaS** (e.g. Plausible Analytics)
-2. **E-commerce** (e.g. Allbirds)
-3. **Digital Marketing Agency** (e.g. Jay Jagle Innovations / Single Grain)
-4. **Healthcare** (e.g. Mayo Clinic / Ro.co)
-5. **EdTech** (e.g. Coursera)
-6. **Local Services / Home Trades** (e.g. Roto-Rooter)
-7. **Developer Platform** (e.g. GitHub)
-8. **Industrial / B2B Manufacturing** (e.g. eMachineShop / Fastenal)
+### A. Operational Reliability Metrics (Live Benchmark Invocations)
+Operational metrics measure infrastructure, bot-protection barriers, rate limits, and provider token boundaries across all execution attempts.
 
-### Evaluation Dimensions & Scoring
-- **Website Understanding:** Brand name identity, category classification, and summary quality.
-- **Evidence Grounding & Provenance:** Provenance attribution, verbatim quote matching, canonical source URL matching, and automatic downgrading of unsupported services.
-- **Competitor Intelligence:** Reachability vs. relevance separation, exclusion of unrelated competitors from comparison matrices, and analyzed brand retention.
-- **Search Query Quality:** Exactly 5 recommendations, all 5 platforms represented (Google, FB, IG, LinkedIn, X), and platform-tailored query formats.
-- **SEO Improvements:** Strict character length boundaries on titles (10–65 chars) and meta descriptions (70–165 chars), alongside deterministic HTML checks.
-- **Services & Audience:** Flexible cardinality (0–5 services), customer needs analysis, and actionable audience segmentation.
+| Total Attempts | Successful Analyses | Website Access Failures (403) | Rate Limits (429) | Payload Limits (413) | Timeouts (504) | Other Failures | Success Rate |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 12 | 8 | 2 | 2 | 0 | 0 | 0 | **66.7%** |
 
-### Benchmark Results Summary
-*See [`docs/benchmark_results.md`](file:///d:/ai-link-analysis/docs/benchmark_results.md) for full report.*
+- **Website Access Failures (403):** `https://ro.co` (Cloudflare WAF) and `https://www.fastenal.com` (Akamai WAF) refused automated bot fetching. These failures are recorded in the failure log without bypass or SSRF tampering; accessible alternative targets (`https://www.teladoc.com` and `https://www.emachineshop.com`) were evaluated to complete the categories.
+- **Provider Rate Limits (429):** Rapid sequential invocations on Groq free-tier exhausted the 8,000 TPM limit. Resolved by sequential execution with 30–35s pacing delay and state resumption (`--resume`).
+- **Payload Limits (413):** Dense catalog sites (e.g. Coursera) originally exceeded 8,000 prompt tokens; eliminated by setting `MAX_CONTENT_CHARS=10000` and `max_completion_tokens=4000`.
 
-| Category | Target URL | Understanding | Grounding | Competitors | Queries | SEO | Services & Audience | Overall Score |
+### B. Live Analysis Quality Scores (Successful Analyses Only)
+*Quality scores are computed **strictly on successful runs** ($n \ge 1$); failed runs report `N/A` and are never converted into 0% quality scores.*
+
+| Category | Target URL | Runs (n) | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Quality Score | Needs Manual Review |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|
+| **SaaS** | `https://plausible.io/` | 1 | 100% | 100% | 100% | 100% | 100% | 100% | **100%** | 2 item(s) |
+| **E-commerce** | `https://www.allbirds.com/` | 1 | 100% | 100% | 100% | 100% | 33% | 100% | **89%** | 2 item(s) |
+| **Digital Marketing** | `https://www.singlegrain.com/` | 1 | 100% | 83% | 100% | 100% | 33% | 100% | **86%** | 2 item(s) |
+| **Healthcare** | `https://www.teladochealth.com/` | 1 | 100% | 100% | 100% | 100% | 100% | 100% | **100%** | 2 item(s) |
+| **EdTech** | `https://www.coursera.org/` | 1 | 100% | 100% | 100% | 100% | 67% | 100% | **94%** | 2 item(s) |
+| **Local Services** | `https://www.rotorooter.com/` | 1 | 100% | 100% | 100% | 100% | 33% | 100% | **89%** | 2 item(s) |
+| **Developer Platform** | `https://github.com/` | 1 | 100% | 100% | 100% | 100% | 100% | 100% | **100%** | 2 item(s) |
+| **Industrial B2B** | `https://www.emachineshop.com/` | 1 | 100% | 100% | 100% | 100% | 67% | 100% | **94%** | 2 item(s) |
+
+**Mean Quality Score Across Successful Analyses:** `94.1%`
+
+### C. Offline Fixture Consistency Validation
+> [!NOTE]
+> **Methodological Limitation Notice:**
+> The offline benchmark validates schema conformity, quotation matching algorithms, and evaluator consistency against prepared test fixtures (`benchmarks/categories_fixtures.json`).
+> **It does NOT establish real-world model accuracy.** Real-world model quality is established strictly through live pipeline evaluations above.
+
+| Category | Fixture URL | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Fixture Consistency Score |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
 | **SaaS** | `https://plausible.io` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
 | **E-commerce** | `https://www.allbirds.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
-| **Digital Marketing** | `https://jayjagleinnovations.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
-| **Healthcare** | `https://www.mayoclinic.org` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Digital marketing / agency** | `https://jayjagleinnovations.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Healthcare** | `https://www.mayoclinic.org` | 90% | 100% | 100% | 100% | 100% | 100% | **98%** |
 | **EdTech** | `https://www.coursera.org` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
-| **Local Services** | `https://www.rotorooter.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
-| **Developer Platform** | `https://github.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Local services / trades** | `https://www.rotorooter.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Developer platform** | `https://github.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
 | **Industrial B2B** | `https://www.emachineshop.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
 
 ---
@@ -548,15 +561,19 @@ The benchmark framework ([`scripts/evaluator.py`](file:///d:/ai-link-analysis/sc
 
 *Full evaluation details available in [`docs/model_comparison.md`](file:///d:/ai-link-analysis/docs/model_comparison.md).*
 
-| Provider | Model | Type | Input / 1M | Output / 1M | Cache Read / 1M | Est. Cost / Run | Typical Latency | Structured JSON Mechanism |
-|---|---|---|---:|---:|---:|---:|---:|---|
-| **Groq** | `openai/gpt-oss-120b` | **Measured on Live Testbed** | $0.15 | $0.60 | $0.075 | **$0.00242** | **8.9s – 10.5s** | JSON Mode + Pydantic Schema |
-| **OpenAI** | `gpt-6-luna` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00188 | 6.0s – 9.0s | Native Strict `json_schema` |
-| **Anthropic** | `claude-haiku-5-5` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00188 | 5.0s – 8.0s | Forced Tool Calling Schema |
-| **Google Gemini** | `gemini-3.5-flash-lite` | Published Specification | $0.30 | $2.50 | $0.030 | ~$0.00844 | 4.0s – 7.0s | `response_schema` mode |
+> [!IMPORTANT]
+> **Groq is the only currently tested provider on our live testbed.** All performance and cost numbers for Groq reflect actual measured runs. Figures for OpenAI, Anthropic, and Google Gemini represent official published vendor list prices and specifications.
 
-### Real-World Groq Finding
-- **Measured Free-Tier Rate Limit:** Groq's free tier has a strict 6,000 TPM limit. Running back-to-back analyses (~7,300 tokens each) triggers `HTTP 429`. Our system catches this cleanly, executes backoff retries, and returns a sanitized `503 Service Unavailable` with `code: "llm_rate_limited"`, never leaking credentials or raw stack traces.
+| Provider | Model ID | Status | Input / 1M | Output / 1M | Cache Read / 1M | Est. Cost / Analysis | Typical Latency | Structured JSON Mechanism |
+|---|---|---|---:|---:|---:|---:|---|---|
+| **Groq** | `openai/gpt-oss-120b` | **Measured on Live Testbed** | $0.15 | $0.60 | $0.075 | **$0.0020 – $0.0024** | **8.9s – 10.5s** | JSON Mode + Pydantic Schema |
+| **OpenAI** | `gpt-6-luna` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00170 | 6.0s – 9.0s (Vendor Spec) | Native Strict `json_schema` |
+| **Anthropic** | `claude-haiku-5-5` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00170 | 5.0s – 8.0s (Vendor Spec) | Forced Tool Calling Schema |
+| **Google Gemini** | `gemini-3.5-flash-lite` | Published Specification | $0.30 | $2.50 | $0.030 | ~$0.00760 | 4.0s – 7.0s (Vendor Spec) | `response_schema` mode |
+
+### Real-World Groq Operational Findings
+- **8,000 TPM Quota Management:** Groq's tier enforces an 8,000 Tokens Per Minute limit. Running analyses back-to-back without cooldown triggers `HTTP 429 Too Many Requests`. Pacing sequential requests with a 30s delay completely resolves this.
+- **HTTP 413 Payload Management:** Very large prompt inputs (>8,000 tokens) trigger `HTTP 413 (Payload Too Large)`. Bounding `MAX_CONTENT_CHARS=10000` keeps prompts at ~4,500 tokens, eliminating 413 errors while preserving grounding excerpts.
 
 ---
 
