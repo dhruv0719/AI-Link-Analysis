@@ -40,8 +40,25 @@ Key design decisions
 | **Raw REST (httpx) for OpenAI, Anthropic and Gemini** | One dependency, identical timeout/retry/logging for every provider, switch with an env var, trivial to mock in tests. |
 | **Pydantic validation + one repair call + fallback provider** | LLM JSON is *validated*, not trusted. Errors are fed back once; if still invalid, the fallback provider is tried. |
 | **Competitors are labelled `ai_suggested` and fact-checked** | The LLM suggests competitors from its own knowledge; the server then checks that each suggested site is live and mentions the competitor's name (`verification` field). No claim of "research" is made. |
+| **Deterministic runtime evidence grounding** | Factual claims (`source: "website"`, brand, location) require exact supporting quotations from fetched pages. Quotes are verified with Unicode NFKC and whitespace normalization. Services without verifiable evidence are automatically downgraded to `source: "inferred"`. |
 | **On-page SEO audit is computed, not generated** | Title/meta lengths, H1 count, canonical, alt text, JSON-LD, etc. come from the real HTML, so those facts cannot be hallucinated. |
 | **No search volumes, ever** | Prompt forbids them and the schema has no field for them (no data source = no numbers). |
+
+### Evidence Grounding & Epistemic Provenance
+
+The API distinguishes four epistemic statuses across all output sections:
+
+1. **Website-Verified (`website_verified`):** Factual claims (brand name, explicit service offerings, physical location) backed by verifiable verbatim excerpts from the fetched website.
+2. **Inferred (`inferred`):** Plausible analytical deductions drawn by the model (e.g. target customer profiles, offerings implied but not verbatim quoted).
+3. **Recommendations (`recommendation`):** Forward-looking suggestions (e.g. search queries, supporting content topics, marketing segments).
+4. **AI-Suggested Competitors (`ai_suggested`):** Suggestions derived from LLM memory, verified for HTTP reachability and on-page name presence.
+
+**Deterministic Evidence Validation Rules:**
+- Every service claimed as `source: "website"` must provide supporting `Evidence(quote=..., source_url=...)`.
+- The `source_url` must match an actual page fetched during analysis.
+- The `quote` is normalized (Unicode NFKC, smart quotes/dashes standardized, whitespace collapsed) and verified against the page corpus.
+- If a service lacks verifiable evidence, the server **automatically downgrades** it to `source: "inferred"` with `provenance: "inferred"` and removes unverified evidence from the response.
+- **Important Limitation:** Exact text matching proves that a quotation appears in the fetched website content; it does not prove that the website itself is truthful.
 
 ## Quick start
 
