@@ -16,6 +16,7 @@ _PLATFORM_ALIASES = {
 }
 
 ServiceSource = Literal["website", "inferred"]
+Provenance = Literal["website_verified", "inferred", "unverified", "recommendation"]
 ContentType = Literal[
     "service_landing_page", "industry_page", "faq", "blog_topic",
     "location_page", "supporting_article", "case_study", "comparison_page", "other",
@@ -42,10 +43,25 @@ class _Base(BaseModel):
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
 
+class Evidence(_Base):
+    quote: str = Field(..., min_length=1, max_length=500, description="Short supporting excerpt from the website")
+    source_url: str = Field(..., min_length=1, max_length=2048, description="URL of the page where the quote appears")
+
+    @field_validator("quote", "source_url")
+    @classmethod
+    def _validate_not_empty(cls, v: str) -> str:
+        s = v.strip()
+        if not s:
+            raise ValueError("Evidence field cannot be empty")
+        return s
+
+
 class Brand(_Base):
     name: str = Field(..., description="Brand / company name as used by the business")
     category: str = Field(..., description="Main business category")
     summary: str = Field(..., description="1-2 sentence summary of what the business does")
+    provenance: Provenance = "inferred"
+    evidence: list[Evidence] = Field(default_factory=list, max_length=5)
 
 
 class LLMCompetitor(_Base):
@@ -111,6 +127,7 @@ class SearchQuery(_Base):
     intent: str
     business_relevance: str = ""
     target_audience: str = ""
+    provenance: Provenance = "recommendation"
 
     @field_validator("platforms", mode="before")
     @classmethod
@@ -131,6 +148,7 @@ class SupportingContent(_Base):
     type: ContentType = "other"
     title: str
     rationale: str = ""
+    provenance: Provenance = "recommendation"
 
     @field_validator("type", mode="before")
     @classmethod
@@ -160,6 +178,8 @@ class Service(_Base):
     target_customer: str
     main_benefit: str
     source: ServiceSource = "website"
+    provenance: Provenance = "inferred"
+    evidence: list[Evidence] = Field(default_factory=list, max_length=5)
 
     @field_validator("source", mode="before")
     @classmethod
@@ -171,6 +191,7 @@ class MarketingSegment(_Base):
     audience: str
     business_type: str = ""
     requirement: str = ""
+    provenance: Provenance = "recommendation"
 
 
 class TargetAudience(_Base):
@@ -180,6 +201,9 @@ class TargetAudience(_Base):
     business_types: list[str] = Field(default_factory=list)
     customer_profiles: list[str] = Field(default_factory=list)
     geographic_focus: Optional[str] = None
+    geographic_focus_provenance: Optional[Provenance] = None
+    geographic_focus_evidence: list[Evidence] = Field(default_factory=list, max_length=5)
+    audience_provenance: Provenance = "inferred"
     customer_needs: list[str] = Field(default_factory=list)
     customer_challenges: list[str] = Field(default_factory=list)
     customer_interests: list[str] = Field(default_factory=list)
