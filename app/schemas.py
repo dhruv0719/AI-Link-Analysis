@@ -60,7 +60,18 @@ class Brand(_Base):
     name: str = Field(..., description="Brand / company name as used by the business")
     category: str = Field(..., description="Main business category")
     summary: str = Field(..., description="1-2 sentence summary of what the business does")
-    provenance: Provenance = "inferred"
+    provenance: Provenance = Field(
+        "inferred",
+        description="Overall brand provenance (website_verified only if brand name is grounded in page metadata/content)."
+    )
+    name_provenance: Provenance = Field(
+        "inferred",
+        description="Provenance of the brand name itself."
+    )
+    summary_provenance: Provenance = Field(
+        "inferred",
+        description="Provenance of the brand summary."
+    )
     evidence: list[Evidence] = Field(default_factory=list, max_length=5)
 
 
@@ -71,6 +82,10 @@ class LLMCompetitor(_Base):
     target_market: str = ""
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
+    provenance: Provenance = Field(
+        "inferred",
+        description="Competitor details are AI suggestions, not verified facts."
+    )
 
 
 class ComparisonEntry(_Base):
@@ -80,6 +95,10 @@ class ComparisonEntry(_Base):
     target_market: str = ""
     key_strength: str = ""
     opportunity: str = ""
+    provenance: Provenance = Field(
+        "inferred",
+        description="Comparison rows are AI analytical interpretations."
+    )
 
     @field_validator("role", mode="before")
     @classmethod
@@ -179,6 +198,10 @@ class Service(_Base):
     main_benefit: str
     source: ServiceSource = "website"
     provenance: Provenance = "inferred"
+    description_provenance: Provenance = Field(
+        "inferred",
+        description="website_verified if description is directly grounded in website text, inferred if synthesized.",
+    )
     evidence: list[Evidence] = Field(default_factory=list, max_length=5)
 
     @field_validator("source", mode="before")
