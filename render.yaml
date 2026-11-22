@@ -14,6 +14,8 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: ENVIRONMENT
+        value: "production"
       - key: TRUST_PROXY_HEADERS
         value: "true"            # real client IP for rate limiting behind Render's proxy
       - key: RATE_LIMIT_PER_MINUTE
