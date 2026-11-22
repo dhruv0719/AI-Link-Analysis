@@ -62,17 +62,26 @@ class Brand(_Base):
     summary: str = Field(..., description="1-2 sentence summary of what the business does")
     provenance: Provenance = Field(
         "inferred",
-        description="Overall brand provenance (website_verified only if brand name is grounded in page metadata/content)."
+        description="Overall brand provenance (website_verified only if both brand name and summary are verified)."
     )
     name_provenance: Provenance = Field(
         "inferred",
         description="Provenance of the brand name itself."
     )
+    name_evidence: list[Evidence] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Inspectable evidence grounding the brand name from page metadata/content."
+    )
     summary_provenance: Provenance = Field(
         "inferred",
         description="Provenance of the brand summary."
     )
-    evidence: list[Evidence] = Field(default_factory=list, max_length=5)
+    evidence: list[Evidence] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Evidence grounding the brand summary."
+    )
 
 
 class LLMCompetitor(_Base):
