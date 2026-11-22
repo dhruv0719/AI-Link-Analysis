@@ -128,6 +128,8 @@ def _raise_for_status(resp: httpx.Response, provider: str) -> None:
         raise LLMProviderError(f"{provider} model not found - check LLM_MODEL ({detail[:120]}).", status=status, kind="model")
     if status == 429:
         raise LLMProviderError(f"{provider} rate limit / quota reached.", retryable=True, status=status, kind="rate_limit")
+    if status == 413:
+        raise LLMProviderError(f"{provider} payload too large (HTTP 413): {detail[:200]}", status=status, retryable=False, kind="payload_too_large")
     if status >= 500 or status == 408:
         raise LLMProviderError(f"{provider} is temporarily unavailable (HTTP {status}).", retryable=True, status=status)
     raise LLMProviderError(f"{provider} rejected the request (HTTP {status}): {detail[:200]}", status=status, kind="bad_request")
@@ -330,6 +332,8 @@ class LLMService:
         if "rate limit" in last:
             raise AppError(503, "llm_rate_limited", "The LLM provider is rate limiting requests. Please retry shortly.",
                            headers={"Retry-After": "30"})
+        if "payload too large" in last or "413" in last:
+            raise AppError(502, "llm_payload_too_large", "The request content exceeded the LLM provider's token or payload limit.")
         if "validation" in last or "JSON" in last or "truncated" in last or "tool call" in last:
             raise AppError(502, "llm_invalid_response", "The LLM did not return a valid structured analysis. Please retry.")
         raise AppError(502, "llm_unavailable", "The LLM provider is currently unavailable. Please retry shortly.")

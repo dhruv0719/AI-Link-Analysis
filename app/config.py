@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     fetch_max_bytes: int = 2_000_000
     max_redirects: int = 5
     max_extra_pages: int = 3
-    max_content_chars: int = 20_000
+    max_content_chars: int = 10_000
     user_agent: str = "Mozilla/5.0 (compatible; LinkAnalysisBot/1.0)"
 
     # --- Cache / protection ---------------------------------------------------

@@ -626,7 +626,7 @@ class SiteContent:
         return " ".join(chunks).lower()
 
 
-def _compact_jsonld(items: list[dict], limit: int = 1500) -> str:
+def _compact_jsonld(items: list[dict], limit: int = 800) -> str:
     return json.dumps(items, ensure_ascii=False, separators=(",", ":"))[:limit] if items else ""
 
 
@@ -687,7 +687,7 @@ def build_prompt_text(pages: list[PageContent], budget: int) -> str:
         header.append(f"Footer context: {home.footer_text}")
     head_text = "\n".join(header)
 
-    remaining = max(budget - len(head_text), 2000)
+    remaining = max(budget - len(head_text), 1500)
     shares = [0.55] + [0.45 / max(len(pages) - 1, 1)] * (len(pages) - 1)
     sections = [head_text]
     for page, share in zip(pages, shares):
