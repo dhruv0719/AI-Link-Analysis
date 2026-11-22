@@ -26,7 +26,7 @@ log = logging.getLogger("link_analysis.api")
 
 
 def build_service(settings, client: httpx.AsyncClient) -> AnalysisService:
-    fetcher = SafeFetcher(client, settings)
+    fetcher = SafeFetcher(settings=settings)
     return AnalysisService(
         settings=settings,
         extractor=WebsiteExtractor(fetcher, settings),

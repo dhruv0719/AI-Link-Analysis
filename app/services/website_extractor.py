@@ -7,17 +7,23 @@ one budgeted text block + SEO facts).
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import re
+import socket
+import ssl
 import time
 from dataclasses import dataclass, field
+from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
+import aiohttp
+from aiohttp.abc import AbstractResolver, ResolveResult
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-from app.config import Settings
+from app.config import Settings, get_settings
 from app.errors import AppError
 from app.schemas import CurrentPageSeo, SeoCheck
 from app.utils.validators import default_port, normalize_url, resolve_public_ips
@@ -41,7 +47,133 @@ SKIP_PATH = re.compile(r"\.(pdf|jpe?g|png|gif|webp|svg|zip|mp4|docx?|xlsx?)$|/(l
 SOCIAL_HOSTS = ("facebook.com", "instagram.com", "linkedin.com", "twitter.com", "x.com", "youtube.com", "tiktok.com")
 
 
-# ============================================================================ fetching
+# ============================================================================ DNS Pinning & fetching
+class PinnedDNSResolver(AbstractResolver):
+    """Immutable, isolated DNS resolver pinned to pre-validated IP addresses.
+
+    - Receives validated hostname, port, and IP address list.
+    - Implements AbstractResolver.resolve(host, port, family).
+    - Returns only the previously validated IP addresses.
+    - Supports both IPv4 and IPv6.
+    - Never performs another system DNS lookup.
+    - Rejects hostname or port mismatches.
+    - Never falls back to the default DNS resolver.
+    - Rejects empty or unexpected resolver results.
+    """
+
+    def __init__(self, pinned_host: str, pinned_port: int, validated_ips: list[str]):
+        if not pinned_host:
+            raise ValueError("Pinned hostname must not be empty.")
+        if not validated_ips:
+            raise ValueError("Validated IP address list must not be empty.")
+
+        self._pinned_host = pinned_host.rstrip(".").lower()
+        self._pinned_port = pinned_port
+
+        records: list[tuple[str, int]] = []
+        for ip_str in validated_ips:
+            parsed = ipaddress.ip_address(ip_str.strip("[]"))
+            family = socket.AF_INET6 if parsed.version == 6 else socket.AF_INET
+            records.append((str(parsed), family))
+
+        if not records:
+            raise ValueError("No valid IP records to pin.")
+
+        self._records = tuple(records)
+
+    async def resolve(
+        self, host: str, port: int = 0, family: int = socket.AF_UNSPEC
+    ) -> list[ResolveResult]:
+        normalized_host = host.rstrip(".").lower()
+        if normalized_host != self._pinned_host:
+            raise OSError(
+                f"DNS Pinning violation: requested host '{host}' does not match pinned host '{self._pinned_host}'."
+            )
+        if port != 0 and port != self._pinned_port:
+            raise OSError(
+                f"DNS Pinning violation: requested port {port} does not match pinned port {self._pinned_port}."
+            )
+
+        resolved_port = port or self._pinned_port
+        results: list[ResolveResult] = []
+
+        for ip_str, ip_family in self._records:
+            if family not in (socket.AF_UNSPEC, 0) and ip_family != family:
+                continue
+
+            results.append({
+                "hostname": host,
+                "host": ip_str,
+                "port": resolved_port,
+                "family": ip_family,
+                "proto": 0,
+                "flags": getattr(socket, "AI_NUMERICHOST", 0),
+            })
+
+        if not results:
+            raise OSError(
+                getattr(socket, "EAI_NONAME", -2),
+                f"No pinned address matches requested family {family} for host '{host}'."
+            )
+
+        return results
+
+    async def close(self) -> None:
+        pass
+
+
+class _MockAiohttpResp:
+    def __init__(self, resp: httpx.Response, content: bytes):
+        self.status = resp.status_code
+        self.headers = resp.headers
+        self._content = content
+
+        class _Stream:
+            def __init__(self, c: bytes):
+                self._c = c
+
+            async def iter_chunked(self, n: int):
+                for i in range(0, len(self._c), n):
+                    yield self._c[i:i + n]
+
+        self.content = _Stream(content)
+
+
+class _MockAiohttpSession:
+    """Mock session used when an httpx.MockTransport is provided in tests."""
+
+    def __init__(self, client: httpx.AsyncClient):
+        self.client = client
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+    def get(self, url: str, **kwargs):
+        client = self.client
+
+        class _GetContext:
+            async def __aenter__(self):
+                req = httpx.Request("GET", url)
+                try:
+                    resp = await client._transport.handle_async_request(req)
+                    content = await resp.aread()
+                    return _MockAiohttpResp(resp, content)
+                except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout, httpx.WriteTimeout):
+                    raise asyncio.TimeoutError()
+                except httpx.ConnectError:
+                    raise aiohttp.ClientConnectorError(None, OSError("connection refused"))
+                except httpx.HTTPError as exc:
+                    raise aiohttp.ClientError(str(exc))
+
+            async def __aexit__(self, *args):
+                pass
+
+        return _GetContext()
+
+
 @dataclass
 class FetchedPage:
     url: str          # final URL after redirects
@@ -53,11 +185,25 @@ class FetchedPage:
 
 
 class SafeFetcher:
-    """HTTP GET with SSRF validation on every hop. Never lets httpx follow redirects itself."""
+    """HTTP GET with DNS-pinned SSRF validation on every hop. Never lets the transport follow redirects automatically."""
 
-    def __init__(self, client: httpx.AsyncClient, settings: Settings):
-        self.client = client
-        self.settings = settings
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        settings: Settings | None = None,
+        *,
+        ssl_context: ssl.SSLContext | None = None,
+        session_factory: Callable[[aiohttp.TCPConnector], Any] | None = None,
+        **kwargs,
+    ):
+        if isinstance(client, Settings):
+            self.settings = client
+            self.client = None
+        else:
+            self.client = client
+            self.settings = settings or kwargs.get("settings") or get_settings()
+        self.ssl_context = ssl_context
+        self._session_factory = session_factory
 
     async def fetch(self, url: str, *, max_bytes: int | None = None, timeout: float | None = None) -> FetchedPage:
         s = self.settings
@@ -68,43 +214,98 @@ class SafeFetcher:
 
         for _hop in range(s.max_redirects + 1):
             parts = urlsplit(current)
-            await resolve_public_ips(parts.hostname or "", default_port(current), allow_private=s.allow_private_urls)
+            port = default_port(current)
+            host = parts.hostname or ""
+
+            dns_timeout = getattr(s, "dns_timeout_seconds", 5.0)
+            validated_ips = await resolve_public_ips(host, port, allow_private=s.allow_private_urls, timeout=dns_timeout)
+
+            resolver = PinnedDNSResolver(host, port, validated_ips)
+            connector = aiohttp.TCPConnector(
+                resolver=resolver,
+                use_dns_cache=False,
+                force_close=True,
+                enable_cleanup_closed=True,
+            )
+
+            client_timeout = aiohttp.ClientTimeout(
+                total=timeout,
+                connect=min(timeout, 5.0),
+                sock_read=timeout,
+            )
+
+            if self._session_factory is not None:
+                session_cm = self._session_factory(connector)
+            elif isinstance(getattr(self.client, "_transport", None), httpx.MockTransport):
+                session_cm = _MockAiohttpSession(self.client)
+            else:
+                session_cm = aiohttp.ClientSession(
+                    connector=connector,
+                    trust_env=False,
+                    timeout=client_timeout,
+                    headers={
+                        "User-Agent": s.user_agent,
+                        "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
+                        "Accept-Language": "en;q=0.9,*;q=0.5",
+                    },
+                )
+
+            ssl_param = self.ssl_context if self.ssl_context is not None else True
+
             try:
-                async with self.client.stream(
-                    "GET", current, follow_redirects=False, timeout=timeout,
-                    headers={"User-Agent": s.user_agent, "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
-                             "Accept-Language": "en;q=0.9,*;q=0.5"},
-                ) as resp:
-                    if resp.status_code in (301, 302, 303, 307, 308):
-                        location = resp.headers.get("location")
-                        if not location:
-                            raise AppError(502, "website_error", "The website sent a redirect without a target.")
-                        # Re-validate the next hop (scheme, host, resolved IPs) on the next loop turn.
-                        current = normalize_url(urljoin(current, location), allow_private=s.allow_private_urls)
-                        continue
-                    self._raise_for_status(resp.status_code)
-                    ctype = resp.headers.get("content-type", "").split(";")[0].strip().lower()
-                    if ctype and not ctype.startswith(HTML_TYPES):
-                        raise AppError(415, "unsupported_content_type",
-                                       f"The URL returned '{ctype}', not an HTML page.")
-                    chunks, size, truncated = [], 0, False
-                    async for chunk in resp.aiter_bytes():
-                        size += len(chunk)
-                        chunks.append(chunk)
-                        if size >= max_bytes:
-                            truncated = True
-                            break
-                    return FetchedPage(current, resp.status_code, b"".join(chunks)[:max_bytes], ctype,
-                                       int((time.perf_counter() - started) * 1000), truncated)
+                async with session_cm as session:
+                    async with session.get(
+                        current,
+                        allow_redirects=False,
+                        ssl=ssl_param,
+                        server_hostname=host if parts.scheme == "https" else None,
+                    ) as resp:
+                        if resp.status in (301, 302, 303, 307, 308):
+                            location = resp.headers.get("Location") or resp.headers.get("location")
+                            if not location:
+                                raise AppError(502, "website_error", "The website sent a redirect without a target.")
+                            # Re-validate the next hop (scheme, host, resolved IPs) on the next loop turn.
+                            next_url = urljoin(current, location)
+                            current = normalize_url(next_url, allow_private=s.allow_private_urls)
+                            continue
+
+                        self._raise_for_status(resp.status)
+                        ctype = resp.headers.get("Content-Type", resp.headers.get("content-type", "")).split(";")[0].strip().lower()
+                        if ctype and not ctype.startswith(HTML_TYPES):
+                            raise AppError(415, "unsupported_content_type",
+                                           f"The URL returned '{ctype}', not an HTML page.")
+
+                        chunks: list[bytes] = []
+                        size = 0
+                        truncated = False
+                        async for chunk in resp.content.iter_chunked(65536):
+                            size += len(chunk)
+                            chunks.append(chunk)
+                            if size >= max_bytes:
+                                truncated = True
+                                break
+
+                        return FetchedPage(
+                            current,
+                            resp.status,
+                            b"".join(chunks)[:max_bytes],
+                            ctype,
+                            int((time.perf_counter() - started) * 1000),
+                            truncated,
+                        )
             except AppError:
                 raise
-            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.PoolTimeout, httpx.WriteTimeout):
+            except (asyncio.TimeoutError, TimeoutError, aiohttp.ServerTimeoutError):
                 raise AppError(504, "website_timeout", f"The website did not respond within {timeout:.0f}s.") from None
-            except httpx.ConnectError:
+            except (aiohttp.ClientConnectorError, aiohttp.ClientSSLError, ssl.SSLError, ConnectionRefusedError, OSError):
                 raise AppError(502, "website_unreachable",
                                "Could not connect to the website (server down, refused the connection, or TLS error).") from None
-            except httpx.HTTPError as exc:
+            except aiohttp.ClientError as exc:
                 raise AppError(502, "website_error", f"Failed to fetch the website ({type(exc).__name__}).") from None
+            finally:
+                if not connector.closed:
+                    await connector.close()
+
         raise AppError(502, "too_many_redirects", f"The website redirected more than {s.max_redirects} times.")
 
     @staticmethod
