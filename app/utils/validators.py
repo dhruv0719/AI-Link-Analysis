@@ -24,7 +24,8 @@ from urllib.parse import urlsplit, urlunsplit
 from app.errors import AppError
 
 MAX_URL_LENGTH = 2048
-ALLOWED_PORTS = {80, 443, 8080, 8443}
+ALLOWED_PORTS = {80, 443}
+DNS_TIMEOUT_SECONDS = 5.0
 BLOCKED_HOSTNAMES = {"localhost", "ip6-localhost", "ip6-loopback", "broadcasthost"}
 BLOCKED_SUFFIXES = (
     ".localhost", ".local", ".internal", ".intranet", ".lan", ".home", ".corp",
@@ -68,7 +69,15 @@ def _parse_ip(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None
     try:
         return ipaddress.ip_address(host)
     except ValueError:
-        return None
+        pass
+    # Also support integer / shorthand numeric IPv4 representations (e.g. 2130706433 or 127.1)
+    try:
+        packed = socket.inet_aton(host)
+        if host.replace(".", "").isdigit():
+            return ipaddress.IPv4Address(packed)
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def normalize_url(raw: str, *, allow_private: bool = False) -> str:
@@ -117,7 +126,7 @@ def normalize_url(raw: str, *, allow_private: bool = False) -> str:
         raise _blocked()
 
     if not allow_private and port is not None and port not in ALLOWED_PORTS:
-        raise _blocked(f"Port {port} is not allowed. Use a standard web port (80/443/8080/8443).")
+        raise _blocked(f"Port {port} is not allowed. Use a standard web port (80/443).")
 
     netloc = f"[{host}]" if ip is not None and ip.version == 6 else host
     if port is not None:
@@ -125,8 +134,19 @@ def normalize_url(raw: str, *, allow_private: bool = False) -> str:
     return urlunsplit((parts.scheme.lower(), netloc, parts.path or "/", parts.query, ""))
 
 
-async def resolve_public_ips(host: str, port: int, *, allow_private: bool = False) -> list[str]:
-    """Resolve ``host`` and make sure every address is public. Returns the address list."""
+async def resolve_public_ips(
+    host: str,
+    port: int,
+    *,
+    allow_private: bool = False,
+    timeout: float = DNS_TIMEOUT_SECONDS,
+) -> list[str]:
+    """Resolve ``host`` and make sure every address is public. Returns the address list.
+
+    Inspects every returned address.
+    Rejects mixed public/private responses.
+    Enforces DNS timeout using asyncio.wait_for().
+    """
     literal = _parse_ip(host.strip("[]"))
     if literal is not None:
         if not allow_private and not is_public_ip(literal):
@@ -135,18 +155,31 @@ async def resolve_public_ips(host: str, port: int, *, allow_private: bool = Fals
 
     loop = asyncio.get_running_loop()
     try:
-        infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        infos = await asyncio.wait_for(
+            loop.getaddrinfo(host, port, type=socket.SOCK_STREAM),
+            timeout=timeout,
+        )
+    except (asyncio.TimeoutError, TimeoutError):
+        raise AppError(504, "dns_timeout", f"DNS resolution timed out for '{host}'.") from None
     except socket.gaierror as exc:
         if exc.errno in {socket.EAI_NONAME, getattr(socket, "EAI_NODATA", -5)}:
             raise AppError(422, "domain_not_found", f"The domain '{host}' could not be found.") from None
         raise AppError(502, "dns_error", f"DNS lookup failed for '{host}'.") from None
 
+    if not infos:
+        raise AppError(422, "domain_not_found", f"The domain '{host}' has no address records.")
+
     addresses: list[str] = []
+    seen: set[str] = set()
     for family, _type, _proto, _canon, sockaddr in infos:
         ip = ipaddress.ip_address(sockaddr[0].split("%")[0])
         if not allow_private and not is_public_ip(ip):
             raise _blocked()
-        addresses.append(str(ip))
+        ip_str = str(ip)
+        if ip_str not in seen:
+            seen.add(ip_str)
+            addresses.append(ip_str)
+
     if not addresses:
         raise AppError(422, "domain_not_found", f"The domain '{host}' has no address records.")
     return addresses

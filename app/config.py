@@ -4,10 +4,11 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal, Optional
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Provider = Literal["openai", "anthropic", "gemini", "groq"]
+Environment = Literal["development", "test", "production"]
 
 DEFAULT_MODELS: dict[str, str] = {
     "openai": "gpt-6-luna",
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
 
     # --- Website fetching ---------------------------------------------------
     fetch_timeout_seconds: float = 12.0
+    dns_timeout_seconds: float = 5.0
     fetch_max_bytes: int = 2_000_000
     max_redirects: int = 5
     max_extra_pages: int = 3
@@ -59,6 +61,7 @@ class Settings(BaseSettings):
     user_agent: str = "Mozilla/5.0 (compatible; LinkAnalysisBot/1.0)"
 
     # --- Cache / protection ---------------------------------------------------
+    environment: Environment = "production"
     cache_ttl_seconds: int = 86_400
     cache_max_items: int = 256
     rate_limit_per_minute: int = 20
@@ -66,6 +69,15 @@ class Settings(BaseSettings):
     verify_competitors: bool = True
     cors_origins: str = "*"
     allow_private_urls: bool = False  # DEV/TEST ONLY
+
+    @model_validator(mode="after")
+    def _validate_environment_and_security(self) -> Settings:
+        if self.environment == "production" and self.allow_private_urls:
+            raise ValueError(
+                "Unsafe configuration: ALLOW_PRIVATE_URLS cannot be enabled in production environment. "
+                "The application has failed closed to prevent SSRF vulnerabilities."
+            )
+        return self
 
     @field_validator("*", mode="before")
     @classmethod
