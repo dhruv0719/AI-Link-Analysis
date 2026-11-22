@@ -69,7 +69,8 @@ def public_dns(monkeypatch):
     """example.com -> public IP, rebind.example -> private IP (simulates DNS pointing inside the network)."""
     table = {"example.com": "93.184.216.34", "www.example.com": "93.184.216.34", "rebind.example": "10.0.0.7"}
 
-    async def fake_resolve(host, port, *, allow_private=False):
+    async def fake_resolve(host, port, *, allow_private=False, timeout=5.0):
+        assert timeout == 5.0, f"Expected default DNS timeout 5.0, got {timeout}"
         if host not in table:
             raise AppError(422, "domain_not_found", "nope")
         if not is_public_ip(ipaddress.ip_address(table[host])):

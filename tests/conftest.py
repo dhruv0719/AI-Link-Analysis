@@ -70,7 +70,7 @@ class FakeProvider(BaseProvider):
 
 
 def make_settings(**overrides) -> Settings:
-    base = dict(_env_file=None, openai_api_key="sk-test", rate_limit_per_minute=1000, max_extra_pages=0)
+    base = dict(_env_file=None, environment="test", openai_api_key="sk-test", rate_limit_per_minute=1000, max_extra_pages=0)
     base.update(overrides)
     return Settings(**base)
 
