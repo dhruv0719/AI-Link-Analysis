@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-PROMPT_VERSION = "2026-11-v3.2"
+PROMPT_VERSION = "2026-11-v3.3.1"
 
 SYSTEM_PROMPT = """You are a senior digital-marketing and SEO analyst. You receive text extracted from a \
 business website and must return ONE JSON object (and nothing else) that follows the schema example.
@@ -30,9 +30,16 @@ but return fewer (or none) if the evidence does not support them. Never classify
 platforms, vendors, products, or suppliers as direct competitors merely to satisfy a count. Give each \
 one's official website (https://domain). If you are not sure a competitor exists, leave it out rather \
 than guess. They are your analytical suggestions and market interpretations, not verified facts from the website.
-4. target_search_queries: exactly 5 queries real customers would type, each tied to the business. \
-Allowed platforms: Google, Facebook, Instagram, LinkedIn, X. A query can list several platforms. \
-NEVER output search volumes, rankings, CPC or any traffic numbers.
+4. target_search_queries: exactly 5 queries real prospects would use to discover the business, each tied to the business offerings and audience. \
+Across the 5 queries, ALL FIVE platforms (Google, Facebook, Instagram, LinkedIn, X) MUST be represented at least once across the list \
+(distribute queries across the platforms where prospects discover this type of business; do not repeat the same query on every platform). \
+For each query, provide 'platform_queries' with tailored, platform-adapted variants: \
+- Google: high-intent natural search phrase. \
+- Instagram: service-, category-, and location-specific compound hashtags (e.g. '#AustinWebDesign #CustomWebsites' or '#PrivacyAnalytics #WebAnalytics'; avoid isolated words like '#Friendly' and avoid meaningless brand-only tags). \
+- Facebook: natural local/community recommendation and discovery language (e.g. 'Austin web design agency recommendations local', 'cookieless analytics tool recommendations'). \
+- LinkedIn: B2B/professional vendor discovery query (e.g. 'enterprise web development agency vendor', 'privacy analytics SaaS vendor'). \
+- X: industry topic and discussion search with topic hashtag (e.g. 'cookieless web analytics #PrivacyTech', 'custom web agency #WebDesign'). \
+NEVER output search volumes, rankings, CPC, or any traffic metrics.
 5. seo_improvements: recommended_title <= 60 characters, meta_description 120-158 characters, \
 keywords that match the real offering, and 5-8 supporting_content ideas.
 6. target_audience: base it on the content. For geographic_focus, identify physical location/service area \
@@ -71,6 +78,10 @@ OUTPUT_EXAMPLE: dict = {
     "target_search_queries": [{
         "query": "string", "platforms": ["Google", "LinkedIn"], "intent": "string",
         "business_relevance": "string", "target_audience": "string",
+        "platform_queries": [
+            {"platform": "Google", "query": "string", "format": "search_phrase"},
+            {"platform": "LinkedIn", "query": "string", "format": "b2b_search"},
+        ],
     }],
     "seo_improvements": {
         "primary_keyword": "string", "secondary_keywords": ["string"], "long_tail_keywords": ["string"],
@@ -98,7 +109,8 @@ OUTPUT_EXAMPLE: dict = {
 }
 
 _COUNT_NOTE = (
-    "Array sizes: target_search_queries = exactly 5 items; top_services = 0 to 5 genuine items "
+    "Array sizes: target_search_queries = exactly 5 items (across the 5 items, all 5 platforms: "
+    "Google, Facebook, Instagram, LinkedIn, X must be represented); top_services = 0 to 5 genuine items "
     "(do not invent filler services); competitors = 0 to 5 items (aim for at least 3 when reliable, "
     "fewer or empty if unsupported); comparison = one 'your_brand' row followed by one row per competitor "
     "(omit competitor rows if no competitors are listed)."

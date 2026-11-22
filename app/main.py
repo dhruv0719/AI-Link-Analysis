@@ -53,7 +53,7 @@ app = FastAPI(
     version="1.0.0",
     description=(
         "Analyses a website URL with an LLM and returns competitor comparison, top-5 target search queries, "
-        "SEO improvements, top-5 services and target audience as structured JSON."
+        "SEO improvements, up to 5 services and target audience as structured JSON."
     ),
     lifespan=lifespan,
 )

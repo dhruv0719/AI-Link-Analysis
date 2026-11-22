@@ -8,8 +8,10 @@ from app.config import Settings
 from app.errors import AppError
 from app.prompts import PROMPT_VERSION, SYSTEM_PROMPT, build_user_prompt
 from app.schemas import (
-    Analysis, CompetitorAnalysis, LinkAnalysisResponse, LLMAnalysis, Meta, SeoImprovements,
+    Analysis, CompetitorAnalysis, LinkAnalysisResponse, LLMAnalysis, Meta, Platform, SearchQuery, SeoImprovements,
+    _derive_platform_variant,
 )
+from urllib.parse import urlsplit
 from app.services.competitor_service import CompetitorService
 from app.services.grounding import ground_brand, ground_service, ground_target_audience
 from app.services.llm_service import LLMService
@@ -20,6 +22,69 @@ from app.utils.validators import normalize_url
 log = logging.getLogger("link_analysis.service")
 MIN_WORDS = 40
 NO_VOLUME_NOTE = "No search-volume, ranking or traffic numbers are included: none were sourced from an API."
+ALL_SUPPORTED_PLATFORMS: list[Platform] = ["Google", "Facebook", "Instagram", "LinkedIn", "X"]
+
+
+def ensure_platform_coverage(
+    queries: list[SearchQuery],
+    *,
+    brand_name: str = "",
+    brand_category: str = "",
+    geographic_focus: str | None = None,
+) -> list[SearchQuery]:
+    """Ensure that all 5 supported platforms are represented across the 5 search queries."""
+    if not queries:
+        return queries
+
+    covered_platforms = {p for q in queries for p in q.platforms}
+    missing_platforms = [p for p in ALL_SUPPORTED_PLATFORMS if p not in covered_platforms]
+    if not missing_platforms:
+        return queries
+
+    for platform in missing_platforms:
+        best_idx = 0
+        best_score = -1
+
+        for i, q in enumerate(queries):
+            text = f"{q.query} {q.intent} {q.business_relevance} {q.target_audience}".lower()
+            score = 0
+            # Prefer queries that currently have fewer platforms assigned
+            score += (5 - len(q.platforms)) * 3
+
+            if platform == "Facebook":
+                if any(w in text for w in ("local", "community", "small business", "sme", "near", "service", "client", "customer", "agency")):
+                    score += 6
+            elif platform == "Instagram":
+                if any(w in text for w in ("design", "creative", "branding", "portfolio", "visual", "product", "studio", "lifestyle", "custom", "development")):
+                    score += 6
+            elif platform == "LinkedIn":
+                if any(w in text for w in ("b2b", "enterprise", "agency", "vendor", "software", "saas", "professional", "founder", "developer", "solutions")):
+                    score += 6
+            elif platform == "X":
+                if any(w in text for w in ("tech", "alternative", "tool", "privacy", "analytics", "developer", "discussion", "trend", "software")):
+                    score += 6
+            elif platform == "Google":
+                if any(w in text for w in ("search", "find", "buy", "hire", "service")):
+                    score += 6
+
+            if score > best_score:
+                best_score = score
+                best_idx = i
+
+        target_q = queries[best_idx]
+        if platform not in target_q.platforms:
+            target_q.platforms.append(platform)
+            target_q.platform_queries.append(
+                _derive_platform_variant(
+                    platform,
+                    target_q.query,
+                    brand_name=brand_name,
+                    category=brand_category,
+                    location=geographic_focus,
+                )
+            )
+
+    return queries
 
 
 class AnalysisService:
@@ -84,9 +149,45 @@ class AnalysisService:
         if not brand.name.strip():
             brand.name = site.home.og.get("og:site_name") or (site.home.title or site.url)
 
+        grounded_services = [ground_service(s, site.pages) for s in parsed.top_services]
+        grounded_audience = ground_target_audience(parsed.target_audience, site.pages)
+
         comp_dump = parsed.competitor_analysis.model_dump(exclude={"competitors"})
-        verified = await self.competitors.verify(parsed.competitor_analysis.competitors, site.url)
+        verified = await self.competitors.verify(
+            parsed.competitor_analysis.competitors,
+            site.url,
+            brand_name=brand.name,
+            brand_category=parsed.brand.category or parsed.competitor_analysis.main_category,
+            services=grounded_services,
+            geographic_focus=grounded_audience.geographic_focus,
+            target_audience=grounded_audience.primary_audience,
+        )
         competitor_analysis = CompetitorAnalysis(**comp_dump, competitors=verified)
+        eligible_comp_names = {
+            c.name.strip().lower()
+            for c in verified
+            if c.name and c.relevance.status in ("likely_relevant", "possible")
+        }
+        eligible_comp_hosts = {
+            (urlsplit(c.website).hostname or "").lower().removeprefix("www.")
+            for c in verified
+            if c.website and c.relevance.status in ("likely_relevant", "possible")
+        }
+        competitor_analysis.comparison = [
+            c for c in competitor_analysis.comparison
+            if c.role == "your_brand"
+            or (
+                c.brand_name.strip().lower() in eligible_comp_names
+                or any(h and h in c.brand_name.strip().lower() for h in eligible_comp_hosts)
+            )
+        ]
+
+        grounded_queries = ensure_platform_coverage(
+            parsed.target_search_queries,
+            brand_name=brand.name,
+            brand_category=parsed.brand.category or parsed.competitor_analysis.main_category,
+            geographic_focus=grounded_audience.geographic_focus,
+        )
 
         current, checks = seo_audit(site.home)
         seo = SeoImprovements(
@@ -95,9 +196,6 @@ class AnalysisService:
             meta_description_length=len(parsed.seo_improvements.meta_description),
             current_page=current, on_page_checks=checks,
         )
-
-        grounded_services = [ground_service(s, site.pages) for s in parsed.top_services]
-        grounded_audience = ground_target_audience(parsed.target_audience, site.pages)
 
         notes = [NO_VOLUME_NOTE]
         if len(verified) < 3:
@@ -143,7 +241,7 @@ class AnalysisService:
             brand=brand,
             analysis=Analysis(
                 competitor_analysis=competitor_analysis,
-                target_search_queries=parsed.target_search_queries,
+                target_search_queries=grounded_queries,
                 seo_improvements=seo,
                 top_services=grounded_services,
                 target_audience=grounded_audience,
