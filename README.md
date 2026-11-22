@@ -1,6 +1,6 @@
 # AI Website Link Analysis API
 
-FastAPI service that takes a website URL, extracts the real content of the site (homepage + key inner pages), sends a cleaned, budgeted version to an LLM and returns **five structured analysis sections** as validated JSON: competitor comparison, top-5 target search queries, SEO improvements, top-5 services and target audience.
+FastAPI service that takes a website URL, extracts the real content of the site (homepage + key inner pages), sends a cleaned, budgeted version to an LLM and returns **five structured analysis sections** as validated JSON: competitor comparison with reachability and market relevance verification, 5 target search queries with platform-specific variants, SEO improvements, 0–5 genuine services with evidence grounding, and target audience.
 
 > **Live demo:** `https://YOUR-SERVICE.onrender.com` &nbsp;|&nbsp; **API docs:** `https://YOUR-SERVICE.onrender.com/docs` &nbsp;*(replace after deploying, see [Deployment](#deployment))*
 
@@ -39,10 +39,10 @@ Key design decisions
 | **Homepage + up to 3 key inner pages** | Homepages are often thin; services/about pages hold the facts needed for "top services" and audience. Same-site links are scored by keywords; all fetches go through the same SSRF-safe fetcher. |
 | **Raw REST (httpx) for OpenAI, Anthropic and Gemini** | One dependency, identical timeout/retry/logging for every provider, switch with an env var, trivial to mock in tests. |
 | **Pydantic validation + one repair call + fallback provider** | LLM JSON is *validated*, not trusted. Errors are fed back once; if still invalid, the fallback provider is tried. |
-| **Competitors are labelled `ai_suggested` and fact-checked** | The LLM suggests competitors from its own knowledge; the server then checks that each suggested site is live and mentions the competitor's name (`verification` field). No claim of "research" is made. |
+| **Competitors: Reachability vs. Market Relevance** | The LLM suggests competitor candidates from memory. The system evaluates them across two strictly separated dimensions: (1) **Reachability** (`verification`), confirming whether the site resolves and mentions the competitor name, and (2) **Market Relevance** (`relevance`), which fetches the competitor website using DNS-pinned `SafeFetcher` and deterministically evaluates Category, Offering, Audience, and Geographic overlap signals. |
 | **Deterministic runtime evidence grounding** | Factual claims (`source: "website"`, brand, location) require exact supporting quotations from fetched pages. Quotes are verified with Unicode NFKC and whitespace normalization. Services without verifiable evidence are automatically downgraded to `source: "inferred"`. |
 | **On-page SEO audit is computed, not generated** | Title/meta lengths, H1 count, canonical, alt text, JSON-LD, etc. come from the real HTML, so those facts cannot be hallucinated. |
-| **No search volumes, ever** | Prompt forbids them and the schema has no field for them (no data source = no numbers). |
+| **Platform-adapted search queries without volume claims** | Generates 5 queries adapted with specific variants for Google (search phrases), Instagram (hashtags), Facebook (community/local discovery), LinkedIn (B2B vendor discovery), and X (topic discussion). No fake search volumes, CPC, or traffic estimates are ever produced. |
 
 ### Evidence Grounding & Epistemic Provenance
 
@@ -51,13 +51,20 @@ The API distinguishes four epistemic statuses across all output sections:
 1. **Website-Verified (`website_verified`):** Factual claims (brand name, explicit service offerings, physical location) backed by verifiable verbatim excerpts from the fetched website.
 2. **Inferred (`inferred`):** Plausible analytical deductions drawn by the model (e.g. target customer profiles, offerings implied but not verbatim quoted).
 3. **Recommendations (`recommendation`):** Forward-looking suggestions (e.g. search queries, supporting content topics, marketing segments).
-4. **AI-Suggested Competitors (`ai_suggested`):** Suggestions derived from LLM memory, verified for HTTP reachability and on-page name presence.
+4. **AI-Suggested Competitors (`ai_suggested`):** Suggestions derived from LLM memory, verified for HTTP reachability and evaluated for market relevance.
 
 **Deterministic Evidence Validation Rules:**
 - Every service claimed as `source: "website"` must provide supporting `Evidence(quote=..., source_url=...)`.
 - The `source_url` must match an actual page fetched during analysis.
 - The `quote` is normalized (Unicode NFKC, smart quotes/dashes standardized, whitespace collapsed) and verified against the page corpus.
 - If a service lacks verifiable evidence, the server **automatically downgrades** it to `source: "inferred"` with `provenance: "inferred"` and removes unverified evidence from the response.
+- **Competitor Relevance & Low-Information Handling:**
+  - Evaluates category, offering, audience, and geographic overlap from actual fetched competitor content.
+  - Distinguishes clinical healthcare practices from consumer product manufacturers (e.g. dental clinic vs toothpaste brand, yielding `category_mismatch` / `substitute`).
+  - Unreachable sites return `verification: "unreachable"` and `relevance.status: "not_checked"`. Unreachable sites are never misclassified as a "category mismatch".
+  - Thin sites (< 30 words) or bot-protected sites return `relevance.status: "insufficient_evidence"` and `competitor_type: "unknown"`.
+  - Competitor evidence quotations are extracted directly from fetched competitor pages and rejected if not present verbatim.
+  - Comparison entries are strictly synchronized to only retain the analyzed brand and competitors present in the final verified list.
 - **Important Limitation:** Exact text matching proves that a quotation appears in the fetched website content; it does not prove that the website itself is truthful.
 
 ## Quick start
@@ -331,10 +338,10 @@ Unusable input is rejected **before** any LLM call, so bad requests cost nothing
 |---|---|
 | FastAPI, Uvicorn, Pydantic, HTTPX, BeautifulSoup, env-var credentials | `requirements.txt`, `app/config.py` |
 | `POST /link-analysis` on port 4000, docs at `/docs` | `app/main.py`; `uvicorn app.main:app --host 0.0.0.0 --port 4000` |
-| Section 1: competitors vs brand (≥3, strengths, weaknesses, advantages, opportunities, comparison table) | `analysis.competitor_analysis` (`competitors`, `comparison`, `strengths`, `opportunities`); competitors labelled `ai_suggested` + live-site `verification` |
-| Section 2: top-5 queries on Google / Facebook / Instagram / LinkedIn / X, intent, relevance, audience | `analysis.target_search_queries`; platform names normalised (e.g. "Twitter" becomes "X"); exactly 5 enforced; **no volumes** |
+| Section 1: competitors vs brand (0–5, strengths, weaknesses, advantages, opportunities, comparison table) | `analysis.competitor_analysis` (`competitors`, `comparison`, `strengths`, `opportunities`); competitors labelled `ai_suggested` with reachability `verification` and content-based `relevance` assessment |
+| Section 2: 5 queries across Google / Facebook / Instagram / LinkedIn / X, intent, relevance, audience | `analysis.target_search_queries`; platform names normalised (e.g. "Twitter" becomes "X"); exactly 5 enforced with `platform_queries` variants; **no search volumes or rankings** |
 | Section 3: keywords, SEO title, meta description, supporting content | `analysis.seo_improvements` + computed `on_page_checks` of the real page |
-| Section 4: top-5 services, labelled when inferred | `analysis.top_services[].source = website \| inferred` |
+| Section 4: 0–5 genuine services, labelled with deterministic provenance | `analysis.top_services[].source = website \| inferred` with exact evidence quotations and canonical source URLs |
 | Section 5: target audience | `analysis.target_audience` |
 | Use actual website content; handle inaccessible sites / invalid URLs | `website_extractor.py`; error table above |
 | SSRF protection, protect keys | [Security](#security) |
@@ -352,7 +359,7 @@ Unusable input is rejected **before** any LLM call, so bad requests cost nothing
 ## Testing & evidence
 
 ```bash
-pytest -q          # 96 tests, ~1 s, fully offline
+pytest -q          # 212 tests, ~2 s, fully offline
 ```
 
 Covers: SSRF matrix (IPv4/IPv6/mapped/NAT64/numeric tricks), redirect-to-internal blocking, HTTP error mapping, size cap, extraction quality, the 3 provider request/response shapes (via `httpx.MockTransport`), retry / repair / fallback logic, caching, rate limiting, every error code, schema-prompt sync, and that no search-volume field exists.
