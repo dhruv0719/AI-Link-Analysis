@@ -40,10 +40,20 @@ BLOCK_TAGS = ["h1", "h2", "h3", "h4", "p", "li", "td", "th", "blockquote", "figc
 PAGE_HINTS = [  # (regex on path+anchor text, score)
     (re.compile(r"(service|solution|what-we-do|offering|capabilit|product|feature|platform)", re.I), 3),
     (re.compile(r"(about|company|who-we-are|our-story|team)", re.I), 3),
-    (re.compile(r"(pricing|plans|packages)", re.I), 2),
+    (re.compile(r"(pricing|plans|packages|quote)", re.I), 2),
+    (re.compile(r"(contact|reach-us|get-in-touch|locations?)", re.I), 2),
     (re.compile(r"(industr|portfolio|case-stud|customers|clients|work)", re.I), 1),
 ]
-SKIP_PATH = re.compile(r"\.(pdf|jpe?g|png|gif|webp|svg|zip|mp4|docx?|xlsx?)$|/(login|signin|sign-in|signup|cart|checkout|account|privacy|terms|cookie|wp-admin|tag|category|author)(/|$)", re.I)
+SKIP_PATH = re.compile(
+    r"\.(pdf|jpe?g|png|gif|webp|svg|ico|css|js|zip|gz|tar|mp4|mp3|wav|avi|mov|docx?|xlsx?|pptx?|xml|json)$|"
+    r"/(login|signin|sign-in|signup|sign-up|register|auth|"
+    r"cart|checkout|basket|account|my-account|"
+    r"privacy|terms|terms-of-service|cookie|cookies|disclaimer|legal|sitemap|"
+    r"wp-admin|wp-includes|admin|search|cdn-cgi|"
+    r"tag|tags|category|categories|author|topics?|"
+    r"page/\d+|p/\d+|archive|archives|\d{4}/\d{2})(/|$)",
+    re.I,
+)
 SOCIAL_HOSTS = ("facebook.com", "instagram.com", "linkedin.com", "twitter.com", "x.com", "youtube.com", "tiktok.com")
 
 
@@ -342,6 +352,7 @@ class PageContent:
     internal_links: list[tuple[str, str]] = field(default_factory=list)  # (anchor text, absolute url)
     social_links: list[str] = field(default_factory=list)
     truncated_source: bool = False
+    footer_text: str | None = None
 
     @property
     def word_count(self) -> int:
@@ -387,6 +398,109 @@ def _jsonld(soup: BeautifulSoup) -> list[dict]:
         except (ValueError, TypeError):
             continue
     return out[:6]
+
+
+_EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+_PHONE_RE = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,5}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}")
+_LOCATION_KEYWORDS = re.compile(
+    r"\b(street|st\.|avenue|ave\.|boulevard|blvd\.|road|rd\.|suite|ste\.|floor|fl\.|"
+    r"building|bldg\.|p\.?o\.?\s*box|postal|zip\s*code|pincode|pin\s*code|"
+    r"headquarters|registered\s*office|office|branch|location|address|"
+    r"city|state|country|province|county)\b",
+    re.I,
+)
+_LEGAL_KEYWORDS = re.compile(
+    r"(©|&copy;|copyright|\b(inc\.|llc|ltd\.|corp\.|gmbh|pvt\.|limited|corporation|registered\s*in|registration\s*no|company\s*number)\b)",
+    re.I,
+)
+_FOOTER_NOISE_TEXT = re.compile(
+    r"^(privacy(\s*policy)?|terms(\s*of\s*(service|use))?|cookie(\s*policy)?|sitemap|disclaimer|all rights reserved)$",
+    re.I,
+)
+
+
+def _extract_footer_context(soup: BeautifulSoup, max_chars: int = 500) -> str | None:
+    """Extract useful business contact, location, and legal information from footer elements.
+
+    Preserves signals like physical address, telephone, email, legal registration,
+    and copyright while discarding navigation links, newsletter boxes, and boilerplate.
+    """
+    footer_tags = soup.find_all("footer")
+    if not footer_tags:
+        footer_tags = [
+            t for t in soup.find_all(True)
+            if isinstance(t, Tag) and (
+                t.get("role") == "contentinfo"
+                or (t.name in ("div", "section") and re.search(r"\bfooter\b", " ".join(filter(None, [t.get("id"), " ".join(t.get("class") or [])])), re.I))
+            )
+        ]
+    if not footer_tags:
+        return None
+
+    items: list[str] = []
+    seen: set[str] = set()
+
+    def add_item(text: str):
+        cleaned = _clean(text)
+        if not cleaned or len(cleaned) < 5:
+            return
+        if _FOOTER_NOISE_TEXT.match(cleaned.lower()):
+            return
+        key = cleaned.lower()
+        if key not in seen and not any(key in s for s in seen):
+            seen.add(key)
+            items.append(cleaned)
+
+    for ft in footer_tags:
+        # 1. Contact links (mailto: and tel:)
+        for a in ft.find_all("a", href=True):
+            href = a["href"].strip()
+            if href.lower().startswith("mailto:"):
+                email = href.split(":", 1)[1].split("?")[0].strip()
+                if _EMAIL_RE.match(email):
+                    add_item(f"Email: {email}")
+            elif href.lower().startswith("tel:"):
+                tel = href.split(":", 1)[1].split("?")[0].strip()
+                if len(tel) >= 7:
+                    add_item(f"Tel: {tel}")
+
+        # 2. Semantic address tags
+        for addr in ft.find_all("address"):
+            txt = _clean(addr.get_text(" "))
+            if txt:
+                add_item(f"Address: {txt}")
+
+        # 3. Dedicated contact / location / legal elements
+        for el in ft.find_all(lambda t: isinstance(t, Tag) and re.search(
+            r"(address|contact|location|office|headquarters|company-info|legal|copyright)",
+            " ".join(filter(None, [t.get("id"), " ".join(t.get("class") or [])])),
+            re.I
+        )):
+            txt = _clean(el.get_text(" "))
+            if txt and len(txt) <= 200:
+                if (_LOCATION_KEYWORDS.search(txt) or _LEGAL_KEYWORDS.search(txt)
+                        or _EMAIL_RE.search(txt) or _PHONE_RE.search(txt)):
+                    add_item(txt)
+
+        # 4. Text blocks inside footer (<p>, <small>, <li>)
+        for el in ft.find_all(["p", "small", "li"]):
+            txt = _clean(el.get_text(" "))
+            if not txt or len(txt) > 250:
+                continue
+            has_email = bool(_EMAIL_RE.search(txt))
+            has_phone = bool(_PHONE_RE.search(txt))
+            has_loc = bool(_LOCATION_KEYWORDS.search(txt))
+            has_legal = bool(_LEGAL_KEYWORDS.search(txt))
+            if has_email or has_phone or has_loc or has_legal:
+                add_item(txt)
+
+    if not items:
+        return None
+
+    combined = " | ".join(items)
+    if len(combined) > max_chars:
+        combined = combined[:max_chars].rsplit(" | ", 1)[0]
+    return combined or None
 
 
 def parse_page(body: bytes, url: str, *, truncated: bool = False) -> PageContent:
@@ -444,6 +558,9 @@ def parse_page(body: bytes, url: str, *, truncated: bool = False) -> PageContent
                 labels.append(label)
     page.nav_labels = labels[:25]
 
+    # Preserve useful footer context before stripping structural containers
+    page.footer_text = _extract_footer_context(soup)
+
     # ... then strip everything that is not primary content.
     for tag in soup(NOISE_TAGS):
         tag.decompose()
@@ -495,7 +612,12 @@ class SiteContent:
     @property
     def plain_text(self) -> str:
         """Lower-cased corpus used for groundedness checks."""
-        return " ".join(" ".join(p.blocks + p.headings + [p.title or ""]) for p in self.pages).lower()
+        chunks = []
+        for p in self.pages:
+            chunks.extend(p.blocks + p.headings + [p.title or ""])
+            if p.footer_text:
+                chunks.append(p.footer_text)
+        return " ".join(chunks).lower()
 
 
 def _compact_jsonld(items: list[dict], limit: int = 1500) -> str:
@@ -510,7 +632,11 @@ def pick_key_pages(home: PageContent, limit: int) -> list[str]:
         path = parts.path.rstrip("/") or "/"
         if path == home_path or SKIP_PATH.search(parts.path):
             continue
-        if path.count("/") > 2:      # deep pages (blog posts, product variants) are low value
+        # Guard against excessively long URLs and crawl traps (repeating path segments)
+        if len(path) > 120:
+            continue
+        segments = [s for s in path.split("/") if s]
+        if len(segments) > 6 or len(segments) != len(set(segments)):
             continue
         score = max((s for rx, s in PAGE_HINTS if rx.search(path) or rx.search(text)), default=0)
         if score:
@@ -551,6 +677,8 @@ def build_prompt_text(pages: list[PageContent], budget: int) -> str:
         header.append(f"Structured data (JSON-LD): {ld}")
     if home.social_links:
         header.append("Social profiles: " + ", ".join(home.social_links[:6]))
+    if home.footer_text:
+        header.append(f"Footer context: {home.footer_text}")
     head_text = "\n".join(header)
 
     remaining = max(budget - len(head_text), 2000)
