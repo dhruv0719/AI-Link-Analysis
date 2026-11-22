@@ -7,12 +7,14 @@ services:
     healthCheckPath: /health
     envVars:
       - key: LLM_PROVIDER
-        value: openai            # openai | anthropic | gemini
+        value: openai            # openai | anthropic | gemini | groq
       - key: OPENAI_API_KEY
         sync: false              # set in the Render dashboard, never in git
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
         sync: false
       - key: ENVIRONMENT
         value: "production"
