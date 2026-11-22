@@ -1,0 +1,234 @@
+[
+  {
+    "category": "SaaS",
+    "url": "https://plausible.io/",
+    "overall_score": 1.0,
+    "scores": {
+      "website_understanding": 1.0,
+      "grounding_accuracy": 1.0,
+      "competitor_intelligence": 1.0,
+      "search_query_quality": 1.0,
+      "seo_quality": 1.0,
+      "services_and_audience": 1.0
+    },
+    "checks": {
+      "brand_identified": true,
+      "category_identified": true,
+      "summary_adequate": true,
+      "audience_identified": true,
+      "services_provenance_labeled": true,
+      "evidence_quotes_grounded": true,
+      "competitor_relevance_evaluated": true,
+      "comparison_eligibility_enforced": true,
+      "your_brand_comparison_retained": true,
+      "exactly_five_queries": true,
+      "all_five_platforms_covered": true,
+      "platform_variants_present": true,
+      "seo_title_bounded": true,
+      "seo_meta_bounded": true,
+      "on_page_checks_computed": true,
+      "services_bounded_0_to_5": true,
+      "audience_needs_identified": true,
+      "audience_segments_identified": true
+    },
+    "details": {
+      "services_count": 5,
+      "verified_services": 5,
+      "inferred_services": 0,
+      "competitors_count": 3,
+      "comparison_rows": 3,
+      "platforms_covered": [
+        "Facebook",
+        "Google",
+        "Instagram",
+        "LinkedIn",
+        "X"
+      ],
+      "llm_timings_ms": {
+        "fetch_and_extract": 1052,
+        "llm": 7737,
+        "verify_and_enrich": 1857,
+        "total": 10647
+      },
+      "estimated_cost_usd": 0.002499,
+      "elapsed_wall_s": 11.84
+    },
+    "requires_human_review": []
+  },
+  {
+    "category": "E-commerce",
+    "url": "https://www.allbirds.com",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "llm_rate_limited"
+    },
+    "requires_human_review": [
+      "Analysis failed with llm_rate_limited: The LLM provider is rate limiting requests. Please retry shortly."
+    ]
+  },
+  {
+    "category": "Digital Marketing",
+    "url": "https://www.singlegrain.com/",
+    "overall_score": 0.9,
+    "scores": {
+      "website_understanding": 1.0,
+      "grounding_accuracy": 0.75,
+      "competitor_intelligence": 1.0,
+      "search_query_quality": 1.0,
+      "seo_quality": 0.67,
+      "services_and_audience": 1.0
+    },
+    "checks": {
+      "brand_identified": true,
+      "category_identified": true,
+      "summary_adequate": true,
+      "audience_identified": true,
+      "services_provenance_labeled": true,
+      "evidence_quotes_grounded": false,
+      "competitor_relevance_evaluated": true,
+      "comparison_eligibility_enforced": true,
+      "your_brand_comparison_retained": true,
+      "exactly_five_queries": true,
+      "all_five_platforms_covered": true,
+      "platform_variants_present": true,
+      "seo_title_bounded": true,
+      "seo_meta_bounded": false,
+      "on_page_checks_computed": true,
+      "services_bounded_0_to_5": true,
+      "audience_needs_identified": true,
+      "audience_segments_identified": true
+    },
+    "details": {
+      "services_count": 5,
+      "verified_services": 2,
+      "inferred_services": 3,
+      "competitors_count": 3,
+      "comparison_rows": 1,
+      "platforms_covered": [
+        "Facebook",
+        "Google",
+        "Instagram",
+        "LinkedIn",
+        "X"
+      ],
+      "llm_timings_ms": {
+        "fetch_and_extract": 2924,
+        "llm": 8610,
+        "verify_and_enrich": 2234,
+        "total": 13769
+      },
+      "estimated_cost_usd": 0.002964,
+      "elapsed_wall_s": 17.19
+    },
+    "requires_human_review": []
+  },
+  {
+    "category": "Healthcare",
+    "url": "https://ro.co",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "website_access_denied"
+    },
+    "requires_human_review": [
+      "Analysis failed with website_access_denied: The website refused automated access (HTTP 403). It may use bot protection or require login."
+    ]
+  },
+  {
+    "category": "EdTech",
+    "url": "https://www.coursera.org",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "llm_unavailable"
+    },
+    "requires_human_review": [
+      "Analysis failed with llm_unavailable: The LLM provider is currently unavailable. Please retry shortly."
+    ]
+  },
+  {
+    "category": "Local Services",
+    "url": "https://www.rotorooter.com",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "llm_rate_limited"
+    },
+    "requires_human_review": [
+      "Analysis failed with llm_rate_limited: The LLM provider is rate limiting requests. Please retry shortly."
+    ]
+  },
+  {
+    "category": "Developer Platform",
+    "url": "https://github.com",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "llm_unavailable"
+    },
+    "requires_human_review": [
+      "Analysis failed with llm_unavailable: The LLM provider is currently unavailable. Please retry shortly."
+    ]
+  },
+  {
+    "category": "Industrial B2B",
+    "url": "https://www.fastenal.com",
+    "overall_score": 0.0,
+    "scores": {
+      "website_understanding": 0.0,
+      "grounding_accuracy": 0.0,
+      "competitor_intelligence": 0.0,
+      "search_query_quality": 0.0,
+      "seo_quality": 0.0,
+      "services_and_audience": 0.0
+    },
+    "checks": {},
+    "details": {
+      "error": "website_access_denied"
+    },
+    "requires_human_review": [
+      "Analysis failed with website_access_denied: The website refused automated access (HTTP 403). It may use bot protection or require login."
+    ]
+  }
+]

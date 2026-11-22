@@ -22,3 +22,82 @@ def test_summary_table_renders():
             {"model": "openai:gpt-6-luna", "success": False, "error": "llm_unavailable"}]
     table = summarise(rows)
     assert "`openai:gpt-6-luna`" in table and "1/2" in table and "12.0 / 12.0" in table and "80%" in table
+
+
+def test_evaluator_across_8_categories_fixtures():
+    from pathlib import Path
+    from scripts.run_benchmark_8_categories import run_offline_evaluation
+    from scripts.evaluator import format_evaluation_summary
+
+    fixtures_path = Path("benchmarks/categories_fixtures.json")
+    assert fixtures_path.exists()
+
+    results = run_offline_evaluation(fixtures_path)
+    assert len(results) == 8
+
+    expected_categories = [
+        "SaaS", "E-commerce", "Digital marketing / agency", "Healthcare",
+        "EdTech", "Local services / trades", "Developer platform", "Industrial B2B"
+    ]
+    actual_categories = [r.category for r in results]
+    assert set(expected_categories) == set(actual_categories)
+
+    for r in results:
+        # Each category in benchmark fixtures should score >= 85%
+        assert r.overall_score >= 0.85, f"Category {r.category} scored {r.overall_score}"
+        assert r.scores["website_understanding"] >= 0.8
+        assert r.scores["grounding_accuracy"] >= 0.8
+        assert r.scores["competitor_intelligence"] >= 0.8
+        assert r.scores["search_query_quality"] >= 0.8
+        assert r.scores["seo_quality"] >= 0.8
+        assert r.scores["services_and_audience"] >= 0.8
+
+    summary = format_evaluation_summary(results)
+    assert "Executive Summary" not in summary  # format_evaluation_summary returns the table
+    assert "| **SaaS** |" in summary
+    assert "| **Developer platform** |" in summary
+
+
+def test_evaluator_flags_quality_defects():
+    from scripts.evaluator import evaluate_analysis
+
+    # A payload missing brand, ungrounded services, only 1 platform, bad SEO
+    bad_payload = {
+        "website": "https://example.com",
+        "brand": {"name": "", "category": "", "summary": ""},
+        "analysis": {
+            "top_services": [
+                {"name": "Fake Service", "source": "website", "evidence": []}
+            ],
+            "competitor_analysis": {
+                "competitors": [
+                    {"name": "Irrelevant", "relevance": {"status": "unrelated"}}
+                ],
+                "comparison": [
+                    {"brand_name": "Irrelevant", "role": "competitor"}  # Ineligible!
+                ]
+            },
+            "target_search_queries": [
+                {"query": "example", "intent": "commercial", "platforms": ["Google"], "platform_queries": []}
+            ],
+            "seo_improvements": {
+                "recommended_title": "Short",  # < 10 chars
+                "meta_description": "Too short",  # < 70 chars
+                "on_page_checks": []
+            },
+            "target_audience": {
+                "primary_audience": "",
+                "customer_needs": [],
+                "recommended_marketing_segments": []
+            }
+        }
+    }
+
+    ev = evaluate_analysis(bad_payload, category="SaaS")
+    assert ev.overall_score < 0.4
+    assert ev.checks["brand_identified"] is False
+    assert ev.checks["category_identified"] is False
+    assert ev.checks["comparison_eligibility_enforced"] is False
+    assert ev.checks["all_five_platforms_covered"] is False
+    assert ev.checks["seo_title_bounded"] is False
+    assert ev.checks["seo_meta_bounded"] is False

@@ -1,0 +1,396 @@
+{
+  "SaaS": {
+    "website": "https://plausible.io",
+    "brand": {
+      "name": "Plausible Analytics",
+      "category": "Web Analytics",
+      "summary": "Lightweight and open-source Google Analytics alternative without cookies, fully compliant with GDPR, CCPA and PECR.",
+      "evidence": [{"quote": "Plausible is intuitive, lightweight and open source web analytics.", "source_url": "https://plausible.io"}]
+    },
+    "analysis": {
+      "brand_overview": "Plausible is a lightweight, privacy-focused alternative to Google Analytics that does not use cookies and respects user privacy.",
+      "main_category": "Web Analytics",
+      "main_products_services": ["Privacy-Focused Web Analytics", "Lightweight Visitor Insights"],
+      "competitors": [
+        {
+          "name": "Matomo", "website": "https://matomo.org", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both offer privacy-oriented web analytics.", "evidence": [{"quote": "Matomo delivers accurate, GDPR-compliant analytics", "source_url": "https://matomo.org"}]}
+        },
+        {
+          "name": "Fathom Analytics", "website": "https://usefathom.com", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both provide cookieless website analytics.", "evidence": [{"quote": "Simple, speedy, and accurate analytics", "source_url": "https://usefathom.com"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "Plausible Analytics", "role": "your_brand", "main_service": "Privacy Analytics", "target_market": "Webmasters", "key_strength": "Cookieless and lightweight", "opportunity": "Enterprise reporting"},
+        {"brand_name": "Matomo", "role": "competitor", "main_service": "Self-hosted analytics", "target_market": "Enterprises", "key_strength": "Full data ownership", "opportunity": "Simplified setup"},
+        {"brand_name": "Fathom Analytics", "role": "competitor", "main_service": "Privacy-first analytics", "target_market": "Creators", "key_strength": "Simplicity", "opportunity": "Deeper integrations"}
+      ],
+      "strengths": ["Zero cookies", "Sub-1KB script"],
+      "opportunities": ["Custom enterprise dashboards"],
+      "target_search_queries": [
+        {"query": "privacy friendly web analytics", "platforms": ["Google"], "intent": "informational", "business_relevance": "core offering", "target_audience": "site owners", "platform_queries": [{"platform": "Google", "query": "privacy friendly web analytics", "format": "search_phrase"}]},
+        {"query": "cookieless analytics tool recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "peer discovery", "target_audience": "community", "platform_queries": [{"platform": "Facebook", "query": "cookieless analytics tool recommendations", "format": "community_search"}]},
+        {"query": "privacy analytics EU hosted", "platforms": ["Instagram"], "intent": "discovery", "business_relevance": "visual/tag", "target_audience": "creators", "platform_queries": [{"platform": "Instagram", "query": "#PrivacyAnalytics #WebAnalytics", "format": "hashtag"}]},
+        {"query": "enterprise web analytics vendor privacy compliant", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "procurement", "target_audience": "officers", "platform_queries": [{"platform": "LinkedIn", "query": "enterprise web analytics vendor privacy compliant", "format": "b2b_keyword"}]},
+        {"query": "cookieless analytics discussion #PrivacyTech", "platforms": ["X"], "intent": "discussion", "business_relevance": "industry trend", "target_audience": "devs", "platform_queries": [{"platform": "X", "query": "cookieless analytics discussion #PrivacyTech", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "privacy web analytics",
+        "secondary_keywords": ["cookieless analytics"],
+        "recommended_title": "Plausible Analytics | Simple, Privacy-Friendly Web Analytics",
+        "meta_description": "Plausible is a lightweight, open-source Google Analytics alternative without cookies, fully compliant with GDPR, CCPA and PECR.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Cookieless Web Analytics", "description": "Privacy-first visitor analytics software.", "target_industry": "Tech", "target_customer": "Site owners", "main_benefit": "Compliance", "source": "website", "evidence": [{"quote": "intuitive, lightweight and open source web analytics", "source_url": "https://plausible.io"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Developers", "Privacy Officers", "Founders"],
+        "customer_needs": ["GDPR compliance", "Speed"],
+        "recommended_marketing_segments": [{"audience": "Privacy advocates", "business_type": "SaaS", "requirement": "Compliance"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6800, "total": 11000}, "input_tokens": 4800, "output_tokens": 2800, "estimated_cost_usd": 0.0024}
+  },
+  "E-commerce": {
+    "website": "https://www.allbirds.com",
+    "brand": {
+      "name": "Allbirds",
+      "category": "Sustainable Footwear & Apparel",
+      "summary": "Direct-to-consumer sustainable footwear and apparel company creating eco-friendly shoes from merino wool, eucalyptus fiber, and sugarcane.",
+      "evidence": [{"quote": "Sustainable shoes and clothing made with natural materials", "source_url": "https://www.allbirds.com"}]
+    },
+    "analysis": {
+      "brand_overview": "Allbirds designs comfortable, sustainable shoes and apparel crafted with natural, renewable materials.",
+      "main_category": "Sustainable Footwear & Apparel",
+      "main_products_services": ["Merino Wool Runners", "Tree Dashers Running Shoes"],
+      "competitors": [
+        {
+          "name": "Veja", "website": "https://www.veja-store.com", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both sell sustainable, eco-friendly footwear direct to consumers.", "evidence": [{"quote": "Ecological and fair trade sneakers", "source_url": "https://www.veja-store.com"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "Allbirds", "role": "your_brand", "main_service": "Wool and Tree Runners", "target_market": "Eco-conscious consumers", "key_strength": "Supreme comfort and natural materials", "opportunity": "Deeper product line"},
+        {"brand_name": "Veja", "role": "competitor", "main_service": "Fair trade sneakers", "target_market": "Fashion-forward consumers", "key_strength": "Urban fashion styling", "opportunity": "Running performance"}
+      ],
+      "strengths": ["Natural materials", "Carbon neutral commitment"],
+      "opportunities": ["Performance athletics expansion"],
+      "target_search_queries": [
+        {"query": "comfortable sustainable running shoes", "platforms": ["Google"], "intent": "transactional", "business_relevance": "core offering", "target_audience": "runners", "platform_queries": [{"platform": "Google", "query": "comfortable sustainable running shoes", "format": "search_phrase"}]},
+        {"query": "eco friendly sneakers recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "peer advice", "target_audience": "community", "platform_queries": [{"platform": "Facebook", "query": "eco friendly sneakers recommendations", "format": "community_search"}]},
+        {"query": "sustainable fashion wool shoes", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "lifestyle", "target_audience": "fashion", "platform_queries": [{"platform": "Instagram", "query": "#SustainableShoes #EcoFootwear", "format": "hashtag"}]},
+        {"query": "sustainable retail brand partnership", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "retail partner", "target_audience": "buyers", "platform_queries": [{"platform": "LinkedIn", "query": "sustainable retail brand partnership vendor", "format": "b2b_keyword"}]},
+        {"query": "zero carbon footprint footwear #EcoFriendly", "platforms": ["X"], "intent": "discussion", "business_relevance": "sustainability", "target_audience": "consumers", "platform_queries": [{"platform": "X", "query": "zero carbon footprint footwear #EcoFriendly", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "sustainable shoes",
+        "secondary_keywords": ["wool sneakers"],
+        "recommended_title": "Allbirds | Sustainable Shoes & Eco-Friendly Clothing",
+        "meta_description": "Shop Allbirds comfortable shoes and clothing crafted with premium sustainable materials like ZQ Merino wool, eucalyptus tree fiber and SweetFoam.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Wool Runners", "description": "Everyday sneakers made with soft, breathable ZQ Merino wool.", "target_industry": "Retail", "target_customer": "Everyday walkers", "main_benefit": "Comfort", "source": "website", "evidence": [{"quote": "Sustainable shoes and clothing made with natural materials", "source_url": "https://www.allbirds.com"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Eco-conscious Shoppers", "Casual Walkers", "Athletes"],
+        "customer_needs": ["Comfort", "Sustainability"],
+        "recommended_marketing_segments": [{"audience": "Green consumers", "business_type": "D2C Retail", "requirement": "Carbon footprint reduction"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6200, "total": 10500}, "input_tokens": 4200, "output_tokens": 2600, "estimated_cost_usd": 0.0021}
+  },
+  "Digital marketing / agency": {
+    "website": "https://jayjagleinnovations.com",
+    "brand": {
+      "name": "Jay Jagle Innovations",
+      "category": "Digital Marketing & Web Agency",
+      "summary": "Full-service digital agency in Surat offering business trademark registration, graphic design, social media marketing, and custom web development.",
+      "evidence": [{"quote": "Jay Jagle Innovations | Digital Marketing & Web Development Agency", "source_url": "https://jayjagleinnovations.com"}]
+    },
+    "analysis": {
+      "brand_overview": "Jay Jagle Innovations is a digital marketing and design agency delivering website creation, SEO, branding, and trademark registration.",
+      "main_category": "Digital Marketing & Web Agency",
+      "main_products_services": ["Website Development", "Social Media Marketing", "Trademark Registration"],
+      "competitors": [],
+      "comparison": [
+        {"brand_name": "Jay Jagle Innovations", "role": "your_brand", "main_service": "Digital Marketing & Web Development", "target_market": "SMEs and Startups", "key_strength": "Comprehensive local business support", "opportunity": "Portfolio expansion"}
+      ],
+      "strengths": ["One-stop digital and legal setup", "Local business focus"],
+      "opportunities": ["Case studies and client testimonials"],
+      "target_search_queries": [
+        {"query": "social media marketing agency Surat", "platforms": ["Google"], "intent": "transactional", "business_relevance": "core service", "target_audience": "local owners", "platform_queries": [{"platform": "Google", "query": "social media marketing agency Surat", "format": "search_phrase"}]},
+        {"query": "digital marketing agency Surat recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "community", "target_audience": "SMEs", "platform_queries": [{"platform": "Facebook", "query": "digital marketing agency Surat recommendations", "format": "community_search"}]},
+        {"query": "Surat logo design branding", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "design", "target_audience": "founders", "platform_queries": [{"platform": "Instagram", "query": "#SuratLogoDesign #BrandIdentity", "format": "hashtag"}]},
+        {"query": "digital branding agency vendor Indian SMEs", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "b2b contract", "target_audience": "directors", "platform_queries": [{"platform": "LinkedIn", "query": "digital branding agency vendor Indian SMEs", "format": "b2b_keyword"}]},
+        {"query": "trademark registration tips startups #TrademarkIndia", "platforms": ["X"], "intent": "discussion", "business_relevance": "legal service", "target_audience": "entrepreneurs", "platform_queries": [{"platform": "X", "query": "trademark registration tips startups #TrademarkIndia", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "digital marketing agency Surat",
+        "secondary_keywords": ["web development Surat"],
+        "recommended_title": "Jay Jagle Innovations | Digital Marketing & Web Agency",
+        "meta_description": "Jay Jagle Innovations offers social media marketing, custom web design, trademark registration, and graphic branding for businesses in Surat.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Website Development", "description": "Custom modern responsive website design.", "target_industry": "General Business", "target_customer": "SMEs", "main_benefit": "Online presence", "source": "website", "evidence": [{"quote": "Jay Jagle Innovations | Digital Marketing & Web Development Agency", "source_url": "https://jayjagleinnovations.com"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Local Business Owners", "Startups in Gujarat"],
+        "geographic_focus": "Surat, Gujarat, India",
+        "customer_needs": ["Brand visibility", "Digital sales"],
+        "recommended_marketing_segments": [{"audience": "Regional retailers", "business_type": "Small Business", "requirement": "Local SEO"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6400, "total": 11100}, "input_tokens": 2700, "output_tokens": 2300, "estimated_cost_usd": 0.0018}
+  },
+  "Healthcare": {
+    "website": "https://www.mayoclinic.org",
+    "brand": {
+      "name": "Mayo Clinic",
+      "category": "Academic Medical Center & Healthcare",
+      "summary": "World-renowned nonprofit academic medical center providing patient-centered clinical care, medical research, and health education across major US campuses.",
+      "evidence": [{"quote": "Mayo Clinic is a nonprofit organization committed to clinical practice, education and research", "source_url": "https://www.mayoclinic.org"}]
+    },
+    "analysis": {
+      "brand_overview": "Mayo Clinic is a premier nonprofit academic medical center specializing in complex patient care, medical research, and patient education.",
+      "main_category": "Academic Medical Center & Healthcare",
+      "main_products_services": ["Complex Medical Diagnosis", "Specialized Surgery", "Clinical Patient Care"],
+      "competitors": [
+        {
+          "name": "Cleveland Clinic", "website": "https://my.clevelandclinic.org", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both are premier US academic medical centers offering top-tier clinical healthcare.", "evidence": [{"quote": "World class care, clinical research and hospital services", "source_url": "https://my.clevelandclinic.org"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "Mayo Clinic", "role": "your_brand", "main_service": "Integrated Clinical Medicine", "target_market": "Patients with complex medical conditions", "key_strength": "Multidisciplinary team approach", "opportunity": "Digital health accessibility"},
+        {"brand_name": "Cleveland Clinic", "role": "competitor", "main_service": "Specialized Hospital Care", "target_market": "Cardiac and general patients", "key_strength": "Heart surgery leadership", "opportunity": "Integrated regional clinics"}
+      ],
+      "strengths": ["Multidisciplinary patient care teams", "World leading medical research"],
+      "opportunities": ["Virtual telemedicine outreach"],
+      "target_search_queries": [
+        {"query": "best hospital for complex medical diagnosis", "platforms": ["Google"], "intent": "transactional", "business_relevance": "clinical specialization", "target_audience": "patients", "platform_queries": [{"platform": "Google", "query": "best hospital for complex medical diagnosis", "format": "search_phrase"}]},
+        {"query": "Mayo Clinic patient care recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "patient reviews", "target_audience": "families", "platform_queries": [{"platform": "Facebook", "query": "Mayo Clinic patient care recommendations", "format": "community_search"}]},
+        {"query": "medical health tips wellness doctors", "platforms": ["Instagram"], "intent": "educational", "business_relevance": "health education", "target_audience": "general public", "platform_queries": [{"platform": "Instagram", "query": "#MayoClinicHealth #MedicalCare", "format": "hashtag"}]},
+        {"query": "healthcare clinical research medical partnership", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "academic research", "target_audience": "medical researchers", "platform_queries": [{"platform": "LinkedIn", "query": "healthcare clinical research medical partnership vendor", "format": "b2b_keyword"}]},
+        {"query": "medical research oncology breakthroughs #MedicalResearch", "platforms": ["X"], "intent": "discussion", "business_relevance": "scientific updates", "target_audience": "physicians", "platform_queries": [{"platform": "X", "query": "medical research oncology breakthroughs #MedicalResearch", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "top hospital for medical care",
+        "secondary_keywords": ["complex diagnosis clinical care"],
+        "recommended_title": "Mayo Clinic | Top-Ranked Hospital & Medical Care",
+        "meta_description": "Mayo Clinic is a top-ranked US hospital providing expert care for complex conditions, clinical research, patient appointments, and health information.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Clinical Patient Care", "description": "Expert diagnosis and treatment for serious and complex illnesses.", "target_industry": "Healthcare", "target_customer": "Patients", "main_benefit": "Expert diagnosis", "source": "website", "evidence": [{"quote": "Mayo Clinic is a nonprofit organization committed to clinical practice, education and research", "source_url": "https://www.mayoclinic.org"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Patients with Complex Health Needs", "Referring Physicians"],
+        "geographic_focus": "Rochester, Minnesota, USA",
+        "customer_needs": ["Accurate diagnosis", "Advanced medical treatment"],
+        "recommended_marketing_segments": [{"audience": "Specialty care seekers", "business_type": "Healthcare", "requirement": "Expert second opinion"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 7200, "total": 12000}, "input_tokens": 5100, "output_tokens": 2900, "estimated_cost_usd": 0.0025}
+  },
+  "EdTech": {
+    "website": "https://www.coursera.org",
+    "brand": {
+      "name": "Coursera",
+      "category": "Online Learning & EdTech",
+      "summary": "Global online education platform partnering with over 300 top universities and industry leaders to offer online courses, professional certificates, and degrees.",
+      "evidence": [{"quote": "Learn without limits with Coursera online learning platform", "source_url": "https://www.coursera.org"}]
+    },
+    "analysis": {
+      "brand_overview": "Coursera delivers online degrees, professional certifications, and self-paced university courses to millions of learners globally.",
+      "main_category": "Online Learning & EdTech",
+      "main_products_services": ["Professional Certificates", "Online University Degrees", "Coursera for Business"],
+      "competitors": [
+        {
+          "name": "edX", "website": "https://www.edx.org", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both partner with accredited universities to provide MOOCs and professional certificates.", "evidence": [{"quote": "Access 3600+ courses from 160+ member universities", "source_url": "https://www.edx.org"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "Coursera", "role": "your_brand", "main_service": "University Certificates & Degrees", "target_market": "Global learners & enterprise teams", "key_strength": "Top university credentials", "opportunity": "Hands-on coding sandboxes"},
+        {"brand_name": "edX", "role": "competitor", "main_service": "MicroBachelors & MicroMasters", "target_market": "Academic learners", "key_strength": "Prestigious founding institutions", "opportunity": "Enterprise training"}
+      ],
+      "strengths": ["Ivy League and top university partnerships", "Recognized professional certificates"],
+      "opportunities": ["Interactive AI-driven tutoring"],
+      "target_search_queries": [
+        {"query": "best online professional certificates in data science", "platforms": ["Google"], "intent": "educational", "business_relevance": "core certificates", "target_audience": "career switchers", "platform_queries": [{"platform": "Google", "query": "best online professional certificates in data science", "format": "search_phrase"}]},
+        {"query": "Coursera online degree student recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "student advice", "target_audience": "students", "platform_queries": [{"platform": "Facebook", "query": "Coursera online degree student recommendations", "format": "community_search"}]},
+        {"query": "online learning study tips certification", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "student lifestyle", "target_audience": "learners", "platform_queries": [{"platform": "Instagram", "query": "#OnlineLearning #ProfessionalCertificates", "format": "hashtag"}]},
+        {"query": "corporate employee upskilling platform vendor", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "enterprise sales", "target_audience": "HR leaders", "platform_queries": [{"platform": "LinkedIn", "query": "corporate employee upskilling platform vendor", "format": "b2b_keyword"}]},
+        {"query": "edtech career upskilling discussion #OnlineDegree", "platforms": ["X"], "intent": "discussion", "business_relevance": "industry topic", "target_audience": "educators", "platform_queries": [{"platform": "X", "query": "edtech career upskilling discussion #OnlineDegree", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "online courses certificates",
+        "secondary_keywords": ["online degrees edtech"],
+        "recommended_title": "Coursera | Build Skills with Online Courses & Degrees",
+        "meta_description": "Join Coursera for free and learn online from world-class universities and companies including Google, IBM, Yale, and Stanford. Earn valuable certificates.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Professional Certificates", "description": "Job-ready career training programs from Google, IBM, and top companies.", "target_industry": "Education", "target_customer": "Career switchers", "main_benefit": "Career advancement", "source": "website", "evidence": [{"quote": "Learn without limits with Coursera online learning platform", "source_url": "https://www.coursera.org"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Lifelong Learners", "Career Changers", "Enterprise HR Teams"],
+        "customer_needs": ["Career credentials", "Flexible learning"],
+        "recommended_marketing_segments": [{"audience": "Up-skillers", "business_type": "EdTech", "requirement": "Accredited certificates"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6500, "total": 10800}, "input_tokens": 4400, "output_tokens": 2700, "estimated_cost_usd": 0.0023}
+  },
+  "Local services / trades": {
+    "website": "https://www.rotorooter.com",
+    "brand": {
+      "name": "Roto-Rooter",
+      "category": "Plumbing & Drain Cleaning Services",
+      "summary": "Premier full-service emergency plumbing, drain cleaning, and water cleanup company offering 24/7 residential and commercial service across North America.",
+      "evidence": [{"quote": "Roto-Rooter Plumbing & Water Cleanup 24/7 Service", "source_url": "https://www.rotorooter.com"}]
+    },
+    "analysis": {
+      "brand_overview": "Roto-Rooter is the largest provider of emergency plumbing, drain clearing, and water remediation services in the United States and Canada.",
+      "main_category": "Plumbing & Drain Cleaning Services",
+      "main_products_services": ["Emergency Drain Cleaning", "Water Damage Cleanup", "Residential Plumbing Repairs"],
+      "competitors": [
+        {
+          "name": "Mr. Rooter", "website": "https://www.mrrooter.com", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both provide residential and commercial emergency plumbing and drain clearing services.", "evidence": [{"quote": "Licensed plumbers for plumbing and drain repair", "source_url": "https://www.mrrooter.com"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "Roto-Rooter", "role": "your_brand", "main_service": "Emergency Plumbing & Drain Cleaning", "target_market": "Homeowners & businesses", "key_strength": "24/7 availability & brand recognition", "opportunity": "Transparent digital pricing"},
+        {"brand_name": "Mr. Rooter", "role": "competitor", "main_service": "Full-Service Plumbing", "target_market": "Residential property owners", "key_strength": "Upfront flat-rate pricing", "opportunity": "Emergency cleanup speed"}
+      ],
+      "strengths": ["Rapid 24/7 emergency response", "Complete water damage remediation"],
+      "opportunities": ["Instant online dispatch booking"],
+      "target_search_queries": [
+        {"query": "emergency plumber near me 24/7 drain cleaning", "platforms": ["Google"], "intent": "transactional", "business_relevance": "emergency dispatch", "target_audience": "homeowners", "platform_queries": [{"platform": "Google", "query": "emergency plumber near me 24/7 drain cleaning", "format": "search_phrase"}]},
+        {"query": "local emergency plumber recommendations Roto Rooter", "platforms": ["Facebook"], "intent": "social", "business_relevance": "community referral", "target_audience": "neighbors", "platform_queries": [{"platform": "Facebook", "query": "local emergency plumber recommendations Roto Rooter", "format": "community_search"}]},
+        {"query": "plumbing maintenance tips water cleanup", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "home maintenance", "target_audience": "property owners", "platform_queries": [{"platform": "Instagram", "query": "#PlumbingRepairs #WaterCleanup", "format": "hashtag"}]},
+        {"query": "commercial facility plumbing contractor vendor", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "facility contract", "target_audience": "property managers", "platform_queries": [{"platform": "LinkedIn", "query": "commercial facility plumbing contractor vendor", "format": "b2b_keyword"}]},
+        {"query": "residential plumbing crisis water damage #PlumbingAdvice", "platforms": ["X"], "intent": "discussion", "business_relevance": "troubleshooting", "target_audience": "consumers", "platform_queries": [{"platform": "X", "query": "residential plumbing crisis water damage #PlumbingAdvice", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "emergency plumbing drain cleaning",
+        "secondary_keywords": ["water damage restoration"],
+        "recommended_title": "Roto-Rooter | 24/7 Emergency Plumber & Drain Service",
+        "meta_description": "Roto-Rooter provides 24/7 emergency plumbing, drain cleaning, and water damage cleanup services for residential and commercial customers. Call now for fast service.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Emergency Drain Cleaning", "description": "Rapid clearing of clogged sinks, sewers, toilets and industrial drains.", "target_industry": "Trades", "target_customer": "Homeowners", "main_benefit": "Immediate unclogging", "source": "website", "evidence": [{"quote": "Roto-Rooter Plumbing & Water Cleanup 24/7 Service", "source_url": "https://www.rotorooter.com"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Homeowners with Plumbing Emergencies", "Commercial Facility Managers"],
+        "geographic_focus": "United States and Canada",
+        "customer_needs": ["24/7 fast response", "Expert licensed plumbers"],
+        "recommended_marketing_segments": [{"audience": "Emergency callers", "business_type": "Home Services", "requirement": "Same-day response"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6100, "total": 10200}, "input_tokens": 3900, "output_tokens": 2500, "estimated_cost_usd": 0.0020}
+  },
+  "Developer platform": {
+    "website": "https://github.com",
+    "brand": {
+      "name": "GitHub",
+      "category": "Developer Platform & Code Hosting",
+      "summary": "World-leading AI-powered developer platform for version control, collaboration, CI/CD with GitHub Actions, and software security.",
+      "evidence": [{"quote": "GitHub: Where the world builds software", "source_url": "https://github.com"}]
+    },
+    "analysis": {
+      "brand_overview": "GitHub is the premier cloud repository hosting, version control, CI/CD, and AI-assisted software development platform.",
+      "main_category": "Developer Platform & Code Hosting",
+      "main_products_services": ["Git Repository Hosting", "GitHub Actions CI/CD", "GitHub Copilot"],
+      "competitors": [
+        {
+          "name": "GitLab", "website": "https://about.gitlab.com", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both provide enterprise Git repository hosting, DevSecOps, and CI/CD pipelines.", "evidence": [{"quote": "The complete AI-powered DevSecOps platform", "source_url": "https://about.gitlab.com"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "GitHub", "role": "your_brand", "main_service": "Repository Hosting & Copilot", "target_market": "Developers and enterprises", "key_strength": "Massive open-source network effect", "opportunity": "End-to-end self-hosting"},
+        {"brand_name": "GitLab", "role": "competitor", "main_service": "Unified DevSecOps Platform", "target_market": "DevOps teams", "key_strength": "Single comprehensive lifecycle tool", "opportunity": "Community size"}
+      ],
+      "strengths": ["World's largest developer ecosystem", "Integrated GitHub Copilot AI"],
+      "opportunities": ["Deeper unified governance"],
+      "target_search_queries": [
+        {"query": "cloud git repository hosting with ci cd", "platforms": ["Google"], "intent": "transactional", "business_relevance": "core platform", "target_audience": "developers", "platform_queries": [{"platform": "Google", "query": "cloud git repository hosting with ci cd", "format": "search_phrase"}]},
+        {"query": "GitHub developer workflow tools recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "peer group", "target_audience": "coder groups", "platform_queries": [{"platform": "Facebook", "query": "GitHub developer workflow tools recommendations", "format": "community_search"}]},
+        {"query": "software development open source coding", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "dev culture", "target_audience": "programmers", "platform_queries": [{"platform": "Instagram", "query": "#DeveloperTools #CodeHosting", "format": "hashtag"}]},
+        {"query": "enterprise devops platform vendor security", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "enterprise contract", "target_audience": "CTOs", "platform_queries": [{"platform": "LinkedIn", "query": "enterprise devops platform vendor security", "format": "b2b_keyword"}]},
+        {"query": "open source software collaboration #GitHubCopilot", "platforms": ["X"], "intent": "discussion", "business_relevance": "dev discourse", "target_audience": "open source contributors", "platform_queries": [{"platform": "X", "query": "open source software collaboration #GitHubCopilot", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "developer platform code hosting",
+        "secondary_keywords": ["git repository ci cd"],
+        "recommended_title": "GitHub | Where the World Builds Software",
+        "meta_description": "GitHub is where over 100 million developers shape the future of software, together. Contribute to open source, build with AI, and automate your workflows.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "Git Repository Hosting", "description": "Cloud-based version control and collaboration for source code.", "target_industry": "Software", "target_customer": "Developers", "main_benefit": "Team collaboration", "source": "website", "evidence": [{"quote": "GitHub: Where the world builds software", "source_url": "https://github.com"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Software Engineers", "DevOps Specialists", "Enterprise Engineering Leaders"],
+        "customer_needs": ["Version control", "Automated deployment"],
+        "recommended_marketing_segments": [{"audience": "Engineering teams", "business_type": "Developer Tools", "requirement": "CI/CD automation"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6600, "total": 10900}, "input_tokens": 4600, "output_tokens": 2700, "estimated_cost_usd": 0.0023}
+  },
+  "Industrial B2B": {
+    "website": "https://www.emachineshop.com",
+    "brand": {
+      "name": "eMachineShop",
+      "category": "Custom Manufacturing & CNC Machining",
+      "summary": "Online custom machine shop offering instant pricing and custom parts fabrication including CNC milling, turning, sheet metal, and 3D printing.",
+      "evidence": [{"quote": "eMachineShop: Easy Online Custom Parts", "source_url": "https://www.emachineshop.com"}]
+    },
+    "analysis": {
+      "brand_overview": "eMachineShop delivers on-demand custom parts prototyping and production through online CAD software and precision manufacturing.",
+      "main_category": "Custom Manufacturing & CNC Machining",
+      "main_products_services": ["CNC Milling & Turning", "Sheet Metal Fabrication", "Injection Molding"],
+      "competitors": [
+        {
+          "name": "Protolabs", "website": "https://www.protolabs.com", "verification": "verified_live_site",
+          "relevance": {"status": "likely_relevant", "competitor_type": "direct", "signals": ["category_overlap", "offering_overlap"], "explanation": "Both operate digital on-demand custom manufacturing services for rapid prototyping and CNC parts.", "evidence": [{"quote": "Rapid prototyping and on-demand digital manufacturing", "source_url": "https://www.protolabs.com"}]}
+        }
+      ],
+      "comparison": [
+        {"brand_name": "eMachineShop", "role": "your_brand", "main_service": "Custom CNC & Sheet Metal", "target_market": "Engineers and makers", "key_strength": "Free CAD software with built-in manufacturability checks", "opportunity": "High-volume enterprise stamping"},
+        {"brand_name": "Protolabs", "role": "competitor", "main_service": "Rapid Prototyping & Injection Molding", "target_market": "Industrial product designers", "key_strength": "Ultra-fast manufacturing turnarounds", "opportunity": "Custom software simplicity"}
+      ],
+      "strengths": ["Free custom CAD software", "Instant online price quotes"],
+      "opportunities": ["Automated supplier quality tracking"],
+      "target_search_queries": [
+        {"query": "custom cnc machining online instant quote", "platforms": ["Google"], "intent": "transactional", "business_relevance": "core service", "target_audience": "mechanical engineers", "platform_queries": [{"platform": "Google", "query": "custom cnc machining online instant quote", "format": "search_phrase"}]},
+        {"query": "custom machining shop supplier recommendations", "platforms": ["Facebook"], "intent": "social", "business_relevance": "supplier referrals", "target_audience": "machinists", "platform_queries": [{"platform": "Facebook", "query": "custom machining shop supplier recommendations", "format": "community_search"}]},
+        {"query": "precision engineering cnc parts fabrication", "platforms": ["Instagram"], "intent": "visual", "business_relevance": "machine craft", "target_audience": "makers", "platform_queries": [{"platform": "Instagram", "query": "#CNCMachining #PrecisionParts", "format": "hashtag"}]},
+        {"query": "precision cnc manufacturing supplier vendor RFQ", "platforms": ["LinkedIn"], "intent": "b2b", "business_relevance": "procurement", "target_audience": "procurement engineers", "platform_queries": [{"platform": "LinkedIn", "query": "precision cnc manufacturing supplier vendor RFQ", "format": "b2b_keyword"}]},
+        {"query": "custom manufacturing prototyping tolerance #Machining", "platforms": ["X"], "intent": "discussion", "business_relevance": "technical debate", "target_audience": "engineers", "platform_queries": [{"platform": "X", "query": "custom manufacturing prototyping tolerance #Machining", "format": "topic_discussion"}]}
+      ],
+      "seo_improvements": {
+        "primary_keyword": "custom cnc machining online",
+        "secondary_keywords": ["sheet metal fabrication prototyping"],
+        "recommended_title": "eMachineShop | Online Custom Parts & CNC Machining",
+        "meta_description": "Get custom metal and plastic parts manufactured easily. Download free CAD software, get instant online pricing, and order precision CNC parts fast.",
+        "on_page_checks": [{"check": "Title tag", "status": "pass", "detail": "Optimal length"}]
+      },
+      "top_services": [
+        {"name": "CNC Milling & Turning", "description": "High-precision computer-controlled cutting for custom metal and plastic parts.", "target_industry": "Industrial Manufacturing", "target_customer": "Engineers", "main_benefit": "Tight tolerances", "source": "website", "evidence": [{"quote": "eMachineShop: Easy Online Custom Parts", "source_url": "https://www.emachineshop.com"}]}
+      ],
+      "target_audience": {
+        "primary_audience": ["Mechanical Engineers", "Product Designers", "Industrial Inventors"],
+        "customer_needs": ["Rapid prototyping", "Strict dimensional tolerances"],
+        "recommended_marketing_segments": [{"audience": "Hardware engineers", "business_type": "Manufacturing", "requirement": "Instant CAD pricing"}]
+      }
+    },
+    "meta": {"timings_ms": {"llm": 6300, "total": 10400}, "input_tokens": 4100, "output_tokens": 2600, "estimated_cost_usd": 0.0021}
+  }
+}
