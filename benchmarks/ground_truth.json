@@ -1,0 +1,223 @@
+{
+  "SaaS": {
+    "category": "SaaS",
+    "representative_url": "https://plausible.io",
+    "expected_facts": {
+      "expected_brand_names": ["Plausible", "Plausible Analytics"],
+      "expected_categories": ["Web Analytics", "Privacy Software", "Analytics SaaS"],
+      "expected_core_services": [
+        "Web Analytics",
+        "Lightweight Analytics",
+        "Privacy-Friendly Analytics",
+        "Cookie-Free Website Tracking"
+      ],
+      "prohibited_fabricated_services": [
+        "Social Media Management",
+        "Email Marketing Retainer",
+        "Custom Software Development"
+      ],
+      "known_valid_competitors": ["Fathom Analytics", "Matomo", "Simple Analytics"],
+      "known_invalid_competitors": ["Salesforce", "Shopify", "WordPress"],
+      "expected_geographic_focus": "Estonia / European Union (EU) or Global",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Verify whether competitor differentiation accurately captures cookie-free and GDPR positioning.",
+      "Review whether recommended marketing segments target privacy-conscious operators rather than generic enterprise."
+    ]
+  },
+  "E-commerce": {
+    "category": "E-commerce",
+    "representative_url": "https://www.allbirds.com",
+    "expected_facts": {
+      "expected_brand_names": ["Allbirds"],
+      "expected_categories": ["Footwear", "Apparel", "Sustainable Fashion", "E-commerce"],
+      "expected_core_services": [
+        "Wool Runners",
+        "Comfortable Shoes",
+        "Sustainable Footwear",
+        "Men's and Women's Shoes"
+      ],
+      "prohibited_fabricated_services": [
+        "Web Design",
+        "Logistics Consulting",
+        "Shoe Repair Subscription"
+      ],
+      "known_valid_competitors": ["Rothy's", "On Running", "Brooks", "Veja"],
+      "known_invalid_competitors": ["Cisco", "IBM", "Adobe"],
+      "expected_geographic_focus": "San Francisco, California, USA or Global E-commerce",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Review whether product materials (merino wool, eucalyptus fiber, sugarcane) are appropriately reflected.",
+      "Check whether search queries target eco-friendly and everyday comfort footwear shoppers."
+    ]
+  },
+  "Digital Marketing": {
+    "category": "Digital Marketing",
+    "representative_url": "https://www.singlegrain.com",
+    "accessible_alternative_url": "https://jayjagleinnovations.com",
+    "expected_facts": {
+      "expected_brand_names": ["Single Grain", "Jay Jagle Innovations"],
+      "expected_categories": ["Digital Marketing Agency", "SEO Agency", "Growth Marketing", "Web Design"],
+      "expected_core_services": [
+        "SEO Services",
+        "Paid Media / PPC Advertising",
+        "Content Marketing",
+        "Conversion Rate Optimization (CRO)",
+        "Web Design & Development"
+      ],
+      "prohibited_fabricated_services": [
+        "Pharmaceutical Testing",
+        "Heavy Machinery Manufacturing"
+      ],
+      "known_valid_competitors": ["NP Digital", "WebFX", "Ignite Visibility", "Disruptive Advertising"],
+      "known_invalid_competitors": ["Google", "Facebook", "Amazon"],
+      "expected_geographic_focus": "Los Angeles, CA / Indianapolis, IN / United States",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Review whether search queries target prospective enterprise clients searching for growth agencies.",
+      "Verify that Google and Meta are not misidentified as direct agency competitors."
+    ]
+  },
+  "Healthcare": {
+    "category": "Healthcare",
+    "representative_url": "https://www.teladoc.com",
+    "accessible_alternative_url": "https://my.clevelandclinic.org",
+    "blocked_primary_url": "https://ro.co",
+    "expected_facts": {
+      "expected_brand_names": ["Teladoc", "Teladoc Health", "Cleveland Clinic"],
+      "expected_categories": ["Telehealth", "Virtual Healthcare", "Medical Services", "Clinical Care"],
+      "expected_core_services": [
+        "Virtual Doctor Visits",
+        "Telehealth Consultations",
+        "Primary Care",
+        "Mental Health Therapy",
+        "Specialty Medical Care"
+      ],
+      "prohibited_fabricated_services": [
+        "Cryptocurrency Exchange",
+        "Industrial Manufacturing"
+      ],
+      "known_valid_competitors": ["Amwell", "MDLive", "Doctor On Demand", "GoodRx"],
+      "known_invalid_competitors": ["Pfizer", "Colgate", "Johnson & Johnson consumer products as direct clinic competitors"],
+      "expected_geographic_focus": "United States / Multi-state licensed medical care",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Check whether medical clinical care is separated from consumer wellness or pharmaceutical manufacturing.",
+      "Verify that health search queries avoid making unsubstantiated clinical efficacy claims."
+    ]
+  },
+  "EdTech": {
+    "category": "EdTech",
+    "representative_url": "https://www.coursera.org",
+    "accessible_alternative_url": "https://www.khanacademy.org",
+    "expected_facts": {
+      "expected_brand_names": ["Coursera", "Coursera Inc."],
+      "expected_categories": ["Online Education", "EdTech", "E-learning Platform", "Higher Education"],
+      "expected_core_services": [
+        "Online Courses",
+        "Professional Certificates",
+        "University Degrees",
+        "Enterprise Learning / Coursera for Business"
+      ],
+      "prohibited_fabricated_services": [
+        "K-12 Daycare",
+        "Vehicle Driving Lessons"
+      ],
+      "known_valid_competitors": ["edX", "Udemy", "LinkedIn Learning", "Pluralsight"],
+      "known_invalid_competitors": ["GitHub", "Stripe", "Slack"],
+      "expected_geographic_focus": "Mountain View, California, USA / Global",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Verify whether university partnership credentials and certificates are distinguished from generic video tutorials.",
+      "Assess whether B2B enterprise training is separated from consumer learner segments."
+    ]
+  },
+  "Local Services": {
+    "category": "Local Services",
+    "representative_url": "https://www.rotorooter.com",
+    "expected_facts": {
+      "expected_brand_names": ["Roto-Rooter", "Roto-Rooter Plumbing & Water Cleanup"],
+      "expected_categories": ["Plumbing Services", "Drain Cleaning", "Water Damage Cleanup", "Local Home Services"],
+      "expected_core_services": [
+        "Drain Cleaning",
+        "Plumbing Repair",
+        "Water Heater Repair & Installation",
+        "Water Damage Restoration",
+        "Emergency Plumbing"
+      ],
+      "prohibited_fabricated_services": [
+        "Software Engineering",
+        "Cryptocurrency Trading"
+      ],
+      "known_valid_competitors": ["Mr. Rooter Plumbing", "Benjamin Franklin Plumbing", "Local Master Plumbers"],
+      "known_invalid_competitors": ["Home Depot as direct trade plumbing contractor", "AWS"],
+      "expected_geographic_focus": "United States & Canada (Cincinnati, Ohio headquarters with localized branch network)",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Confirm that emergency 24/7 service and drain specialization are prominently highlighted.",
+      "Check whether Instagram and Facebook search queries properly utilize local community recommendation phrasing."
+    ]
+  },
+  "Developer Platform": {
+    "category": "Developer Platform",
+    "representative_url": "https://github.com",
+    "expected_facts": {
+      "expected_brand_names": ["GitHub"],
+      "expected_categories": ["Developer Platform", "Code Hosting", "Version Control", "DevOps & Collaboration"],
+      "expected_core_services": [
+        "Git Repository Hosting",
+        "GitHub Actions (CI/CD)",
+        "GitHub Copilot (AI Code Assistant)",
+        "Pull Requests & Code Review",
+        "GitHub Issues & Project Management"
+      ],
+      "prohibited_fabricated_services": [
+        "Physical Warehouse Management",
+        "Catering Retainer"
+      ],
+      "known_valid_competitors": ["GitLab", "Bitbucket", "Sourceforge", "Gitea"],
+      "known_invalid_competitors": ["Asana as primary git host", "Salesforce"],
+      "expected_geographic_focus": "San Francisco, California, USA / Global",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Examine whether enterprise security and CI/CD capabilities are recognized alongside core open-source hosting.",
+      "Verify that developer-focused search queries avoid non-technical jargon."
+    ]
+  },
+  "Industrial B2B": {
+    "category": "Industrial B2B",
+    "representative_url": "https://www.emachineshop.com",
+    "accessible_alternative_url": "https://www.xometry.com",
+    "blocked_primary_url": "https://www.fastenal.com",
+    "expected_facts": {
+      "expected_brand_names": ["eMachineShop", "Micro Logic Corp"],
+      "expected_categories": ["Custom Manufacturing", "CNC Machining", "Rapid Prototyping", "Sheet Metal Fabrication"],
+      "expected_core_services": [
+        "CNC Milling & Turning",
+        "Sheet Metal Fabrication",
+        "Free CAD Software",
+        "Rapid Prototyping & Production Parts",
+        "Waterjet & Laser Cutting"
+      ],
+      "prohibited_fabricated_services": [
+        "Consumer Fashion Retail",
+        "Social Media Consulting"
+      ],
+      "known_valid_competitors": ["Xometry", "Protolabs", "Fictiv", "Hubs"],
+      "known_invalid_competitors": ["Fastenal as direct custom CNC job shop", "Best Buy"],
+      "expected_geographic_focus": "Mahwah, New Jersey, USA",
+      "location_stated_on_site": true
+    },
+    "human_review_criteria": [
+      "Review whether precision tolerances and custom fabrication options are accurately distinguished from off-the-shelf fastener distribution.",
+      "Check whether LinkedIn queries focus on engineering procurement and manufacturing sourcing."
+    ]
+  }
+}

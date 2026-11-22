@@ -101,3 +101,47 @@ def test_evaluator_flags_quality_defects():
     assert ev.checks["all_five_platforms_covered"] is False
     assert ev.checks["seo_title_bounded"] is False
     assert ev.checks["seo_meta_bounded"] is False
+
+
+def test_operational_metrics_categorization():
+    from scripts.evaluator import OperationalMetrics, format_operational_table
+
+    op = OperationalMetrics()
+    op.record_success("SaaS", "https://plausible.io")
+    op.record_failure("Healthcare", "https://ro.co", "403", "The website refused automated access (HTTP 403)")
+    op.record_failure("E-commerce", "https://www.allbirds.com", "429", "Groq rate limit / quota reached (HTTP 429)")
+    op.record_failure("EdTech", "https://www.coursera.org", "413", "tokens per minute (TPM): Limit 8000, Requested 8115")
+    op.record_failure("Industrial", "https://example.com", "504", "fetch_timeout website timed out")
+
+    assert op.total_attempts == 5
+    assert op.successful_analyses == 1
+    assert op.website_access_failures == 1
+    assert op.rate_limit_failures == 1
+    assert op.payload_limit_failures == 1
+    assert op.timeout_failures == 1
+    assert op.other_failures == 0
+    assert op.success_rate == 0.2
+
+    table = format_operational_table(op)
+    assert "| 5 | 1 | 1 | 1 | 1 | 1 | 0 | **20.0%** |" in table
+
+
+def test_quality_summary_reports_na_for_missing_categories():
+    from scripts.evaluator import EvaluationResult, format_quality_summary
+
+    r = EvaluationResult(category="SaaS", url="https://plausible.io", is_fixture=False)
+    r.scores = {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0,
+    }
+    r.needs_manual_review = ["Check competitor differentiation"]
+
+    summary = format_quality_summary([r], ["SaaS", "Healthcare"])
+    assert "| **SaaS** | `https://plausible.io` | 1 |" in summary
+    assert "| **Healthcare** | *(No successful run)* | 0 | N/A | N/A | N/A | N/A | N/A | N/A | **N/A** |" in summary
+    assert "1 item(s)" in summary
+

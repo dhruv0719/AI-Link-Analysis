@@ -1,234 +1,1071 @@
-[
-  {
-    "category": "SaaS",
-    "url": "https://plausible.io/",
-    "overall_score": 1.0,
-    "scores": {
-      "website_understanding": 1.0,
-      "grounding_accuracy": 1.0,
-      "competitor_intelligence": 1.0,
-      "search_query_quality": 1.0,
-      "seo_quality": 1.0,
-      "services_and_audience": 1.0
-    },
-    "checks": {
-      "brand_identified": true,
-      "category_identified": true,
-      "summary_adequate": true,
-      "audience_identified": true,
-      "services_provenance_labeled": true,
-      "evidence_quotes_grounded": true,
-      "competitor_relevance_evaluated": true,
-      "comparison_eligibility_enforced": true,
-      "your_brand_comparison_retained": true,
-      "exactly_five_queries": true,
-      "all_five_platforms_covered": true,
-      "platform_variants_present": true,
-      "seo_title_bounded": true,
-      "seo_meta_bounded": true,
-      "on_page_checks_computed": true,
-      "services_bounded_0_to_5": true,
-      "audience_needs_identified": true,
-      "audience_segments_identified": true
-    },
-    "details": {
-      "services_count": 5,
-      "verified_services": 5,
-      "inferred_services": 0,
-      "competitors_count": 3,
-      "comparison_rows": 3,
-      "platforms_covered": [
-        "Facebook",
-        "Google",
-        "Instagram",
-        "LinkedIn",
-        "X"
-      ],
-      "llm_timings_ms": {
-        "fetch_and_extract": 1052,
-        "llm": 7737,
-        "verify_and_enrich": 1857,
-        "total": 10647
+{
+  "operational_metrics": {
+    "total_attempts": 12,
+    "successful_analyses": 8,
+    "website_access_failures": 2,
+    "rate_limit_failures": 2,
+    "payload_limit_failures": 0,
+    "timeout_failures": 0,
+    "other_failures": 0,
+    "success_rate": 0.6667,
+    "failure_log": [
+      {
+        "category": "Healthcare",
+        "url": "https://ro.co",
+        "error_code": "website_access_denied",
+        "message": "The website refused automated access (HTTP 403). It may use bot protection or require login.",
+        "failure_type": "website_access_blocked (403)"
       },
-      "estimated_cost_usd": 0.002499,
-      "elapsed_wall_s": 11.84
-    },
-    "requires_human_review": []
-  },
-  {
-    "category": "E-commerce",
-    "url": "https://www.allbirds.com",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
-    },
-    "checks": {},
-    "details": {
-      "error": "llm_rate_limited"
-    },
-    "requires_human_review": [
-      "Analysis failed with llm_rate_limited: The LLM provider is rate limiting requests. Please retry shortly."
-    ]
-  },
-  {
-    "category": "Digital Marketing",
-    "url": "https://www.singlegrain.com/",
-    "overall_score": 0.9,
-    "scores": {
-      "website_understanding": 1.0,
-      "grounding_accuracy": 0.75,
-      "competitor_intelligence": 1.0,
-      "search_query_quality": 1.0,
-      "seo_quality": 0.67,
-      "services_and_audience": 1.0
-    },
-    "checks": {
-      "brand_identified": true,
-      "category_identified": true,
-      "summary_adequate": true,
-      "audience_identified": true,
-      "services_provenance_labeled": true,
-      "evidence_quotes_grounded": false,
-      "competitor_relevance_evaluated": true,
-      "comparison_eligibility_enforced": true,
-      "your_brand_comparison_retained": true,
-      "exactly_five_queries": true,
-      "all_five_platforms_covered": true,
-      "platform_variants_present": true,
-      "seo_title_bounded": true,
-      "seo_meta_bounded": false,
-      "on_page_checks_computed": true,
-      "services_bounded_0_to_5": true,
-      "audience_needs_identified": true,
-      "audience_segments_identified": true
-    },
-    "details": {
-      "services_count": 5,
-      "verified_services": 2,
-      "inferred_services": 3,
-      "competitors_count": 3,
-      "comparison_rows": 1,
-      "platforms_covered": [
-        "Facebook",
-        "Google",
-        "Instagram",
-        "LinkedIn",
-        "X"
-      ],
-      "llm_timings_ms": {
-        "fetch_and_extract": 2924,
-        "llm": 8610,
-        "verify_and_enrich": 2234,
-        "total": 13769
+      {
+        "category": "Digital Marketing",
+        "url": "https://www.singlegrain.com",
+        "error_code": "llm_rate_limited",
+        "message": "The LLM provider is rate limiting requests. Please retry shortly.",
+        "failure_type": "provider_rate_limit (429)"
       },
-      "estimated_cost_usd": 0.002964,
-      "elapsed_wall_s": 17.19
-    },
-    "requires_human_review": []
-  },
-  {
-    "category": "Healthcare",
-    "url": "https://ro.co",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
-    },
-    "checks": {},
-    "details": {
-      "error": "website_access_denied"
-    },
-    "requires_human_review": [
-      "Analysis failed with website_access_denied: The website refused automated access (HTTP 403). It may use bot protection or require login."
+      {
+        "category": "Industrial B2B",
+        "url": "https://www.fastenal.com",
+        "error_code": "website_access_denied",
+        "message": "The website refused automated access (HTTP 403). It may use bot protection or require login.",
+        "failure_type": "website_access_blocked (403)"
+      },
+      {
+        "category": "Digital Marketing",
+        "url": "https://www.singlegrain.com",
+        "error_code": "llm_rate_limited",
+        "message": "The LLM provider is rate limiting requests. Please retry shortly.",
+        "failure_type": "provider_rate_limit (429)"
+      }
     ]
   },
-  {
-    "category": "EdTech",
-    "url": "https://www.coursera.org",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
+  "quality_results": [
+    {
+      "category": "SaaS",
+      "url": "https://plausible.io/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 2,
+        "inferred_services": 3,
+        "competitors_count": 3,
+        "comparison_rows": 3,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 1049,
+          "llm": 8419,
+          "verify_and_enrich": 2074,
+          "total": 11544
+        },
+        "estimated_cost_usd": 0.002644,
+        "elapsed_wall_s": 12.78
+      },
+      "needs_manual_review": [
+        "Verify whether competitor differentiation accurately captures cookie-free and GDPR positioning.",
+        "Review whether recommended marketing segments target privacy-conscious operators rather than generic enterprise."
+      ]
     },
-    "checks": {},
-    "details": {
-      "error": "llm_unavailable"
+    {
+      "category": "Healthcare",
+      "url": "https://www.teladochealth.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 4,
+        "inferred_services": 1,
+        "competitors_count": 3,
+        "comparison_rows": 2,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 962,
+          "llm": 7175,
+          "verify_and_enrich": 5918,
+          "total": 14055
+        },
+        "estimated_cost_usd": 0.002296,
+        "elapsed_wall_s": 16.49
+      },
+      "needs_manual_review": [
+        "Check whether medical clinical care is separated from consumer wellness or pharmaceutical manufacturing.",
+        "Verify that health search queries avoid making unsubstantiated clinical efficacy claims."
+      ]
     },
-    "requires_human_review": [
-      "Analysis failed with llm_unavailable: The LLM provider is currently unavailable. Please retry shortly."
-    ]
-  },
-  {
-    "category": "Local Services",
-    "url": "https://www.rotorooter.com",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
+    {
+      "category": "EdTech",
+      "url": "https://www.coursera.org/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 0.94,
+      "overall_score": 0.94,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 0.67,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": false,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 4,
+        "inferred_services": 1,
+        "competitors_count": 3,
+        "comparison_rows": 4,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 2169,
+          "llm": 6722,
+          "verify_and_enrich": 1121,
+          "total": 10013
+        },
+        "estimated_cost_usd": 0.002258,
+        "elapsed_wall_s": 11.87
+      },
+      "needs_manual_review": [
+        "Verify whether university partnership credentials and certificates are distinguished from generic video tutorials.",
+        "Assess whether B2B enterprise training is separated from consumer learner segments."
+      ]
     },
-    "checks": {},
-    "details": {
-      "error": "llm_rate_limited"
+    {
+      "category": "Industrial B2B",
+      "url": "https://www.emachineshop.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 0.94,
+      "overall_score": 0.94,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 0.67,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": false,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 5,
+        "inferred_services": 0,
+        "competitors_count": 3,
+        "comparison_rows": 2,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 6260,
+          "llm": 7434,
+          "verify_and_enrich": 914,
+          "total": 14611
+        },
+        "estimated_cost_usd": 0.002467,
+        "elapsed_wall_s": 20.07
+      },
+      "needs_manual_review": [
+        "Review whether precision tolerances and custom fabrication options are accurately distinguished from off-the-shelf fastener distribution.",
+        "Check whether LinkedIn queries focus on engineering procurement and manufacturing sourcing."
+      ]
     },
-    "requires_human_review": [
-      "Analysis failed with llm_rate_limited: The LLM provider is rate limiting requests. Please retry shortly."
-    ]
-  },
-  {
-    "category": "Developer Platform",
-    "url": "https://github.com",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
+    {
+      "category": "Digital Marketing",
+      "url": "https://www.singlegrain.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 0.86,
+      "overall_score": 0.86,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 0.83,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 0.33,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": false,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": false,
+        "seo_meta_bounded": false,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 3,
+        "inferred_services": 2,
+        "competitors_count": 3,
+        "comparison_rows": 1,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 2491,
+          "llm": 7065,
+          "verify_and_enrich": 1273,
+          "total": 10831
+        },
+        "estimated_cost_usd": 0.002426,
+        "elapsed_wall_s": 11.7
+      },
+      "needs_manual_review": [
+        "Review whether search queries target prospective enterprise clients searching for growth agencies.",
+        "Verify that Google and Meta are not misidentified as direct agency competitors."
+      ]
     },
-    "checks": {},
-    "details": {
-      "error": "llm_unavailable"
+    {
+      "category": "E-commerce",
+      "url": "https://www.allbirds.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 0.89,
+      "overall_score": 0.89,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 0.33,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": false,
+        "seo_meta_bounded": false,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 2,
+        "inferred_services": 3,
+        "competitors_count": 3,
+        "comparison_rows": 2,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 1514,
+          "llm": 7051,
+          "verify_and_enrich": 2033,
+          "total": 10599
+        },
+        "estimated_cost_usd": 0.002236,
+        "elapsed_wall_s": 12.04
+      },
+      "needs_manual_review": [
+        "Review whether product materials (merino wool, eucalyptus fiber, sugarcane) are appropriately reflected.",
+        "Check whether search queries target eco-friendly and everyday comfort footwear shoppers."
+      ]
     },
-    "requires_human_review": [
-      "Analysis failed with llm_unavailable: The LLM provider is currently unavailable. Please retry shortly."
-    ]
-  },
-  {
-    "category": "Industrial B2B",
-    "url": "https://www.fastenal.com",
-    "overall_score": 0.0,
-    "scores": {
-      "website_understanding": 0.0,
-      "grounding_accuracy": 0.0,
-      "competitor_intelligence": 0.0,
-      "search_query_quality": 0.0,
-      "seo_quality": 0.0,
-      "services_and_audience": 0.0
+    {
+      "category": "Local Services",
+      "url": "https://www.rotorooter.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 0.89,
+      "overall_score": 0.89,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 0.33,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": false,
+        "seo_meta_bounded": false,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 4,
+        "verified_services": 1,
+        "inferred_services": 3,
+        "competitors_count": 3,
+        "comparison_rows": 1,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 1794,
+          "llm": 5902,
+          "verify_and_enrich": 2269,
+          "total": 9966
+        },
+        "estimated_cost_usd": 0.001917,
+        "elapsed_wall_s": 12.16
+      },
+      "needs_manual_review": [
+        "Confirm that emergency 24/7 service and drain specialization are prominently highlighted.",
+        "Check whether Instagram and Facebook search queries properly utilize local community recommendation phrasing."
+      ]
     },
-    "checks": {},
-    "details": {
-      "error": "website_access_denied"
+    {
+      "category": "Developer Platform",
+      "url": "https://github.com/",
+      "is_fixture": false,
+      "sample_size": 1,
+      "quality_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 5,
+        "verified_services": 3,
+        "inferred_services": 2,
+        "competitors_count": 3,
+        "comparison_rows": 3,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "fetch_and_extract": 763,
+          "llm": 7110,
+          "verify_and_enrich": 1006,
+          "total": 8881
+        },
+        "estimated_cost_usd": 0.002333,
+        "elapsed_wall_s": 10.44
+      },
+      "needs_manual_review": [
+        "Examine whether enterprise security and CI/CD capabilities are recognized alongside core open-source hosting.",
+        "Verify that developer-focused search queries avoid non-technical jargon."
+      ]
+    }
+  ],
+  "fixture_consistency_results": [
+    {
+      "category": "SaaS",
+      "url": "https://plausible.io",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6800,
+          "total": 11000
+        },
+        "estimated_cost_usd": 0.0024
+      },
+      "needs_manual_review": [
+        "Verify whether competitor differentiation accurately captures cookie-free and GDPR positioning.",
+        "Review whether recommended marketing segments target privacy-conscious operators rather than generic enterprise.",
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
     },
-    "requires_human_review": [
-      "Analysis failed with website_access_denied: The website refused automated access (HTTP 403). It may use bot protection or require login."
-    ]
-  }
-]
+    {
+      "category": "E-commerce",
+      "url": "https://www.allbirds.com",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6200,
+          "total": 10500
+        },
+        "estimated_cost_usd": 0.0021
+      },
+      "needs_manual_review": [
+        "Review whether product materials (merino wool, eucalyptus fiber, sugarcane) are appropriately reflected.",
+        "Check whether search queries target eco-friendly and everyday comfort footwear shoppers.",
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "Digital marketing / agency",
+      "url": "https://jayjagleinnovations.com",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {},
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6400,
+          "total": 11100
+        },
+        "estimated_cost_usd": 0.0018
+      },
+      "needs_manual_review": [
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "Healthcare",
+      "url": "https://www.mayoclinic.org",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 0.98,
+      "overall_score": 0.98,
+      "scores": {
+        "website_understanding": 0.9,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": false,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 7200,
+          "total": 12000
+        },
+        "estimated_cost_usd": 0.0025
+      },
+      "needs_manual_review": [
+        "Check whether medical clinical care is separated from consumer wellness or pharmaceutical manufacturing.",
+        "Verify that health search queries avoid making unsubstantiated clinical efficacy claims.",
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "EdTech",
+      "url": "https://www.coursera.org",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6500,
+          "total": 10800
+        },
+        "estimated_cost_usd": 0.0023
+      },
+      "needs_manual_review": [
+        "Verify whether university partnership credentials and certificates are distinguished from generic video tutorials.",
+        "Assess whether B2B enterprise training is separated from consumer learner segments.",
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "Local services / trades",
+      "url": "https://www.rotorooter.com",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {},
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6100,
+          "total": 10200
+        },
+        "estimated_cost_usd": 0.002
+      },
+      "needs_manual_review": [
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "Developer platform",
+      "url": "https://github.com",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {},
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6600,
+          "total": 10900
+        },
+        "estimated_cost_usd": 0.0023
+      },
+      "needs_manual_review": [
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    },
+    {
+      "category": "Industrial B2B",
+      "url": "https://www.emachineshop.com",
+      "is_fixture": true,
+      "sample_size": 1,
+      "fixture_consistency_score": 1.0,
+      "overall_score": 1.0,
+      "scores": {
+        "website_understanding": 1.0,
+        "grounding_accuracy": 1.0,
+        "competitor_intelligence": 1.0,
+        "search_query_quality": 1.0,
+        "seo_quality": 1.0,
+        "services_and_audience": 1.0
+      },
+      "checks": {
+        "brand_identified": true,
+        "category_identified": true,
+        "summary_adequate": true,
+        "audience_identified": true,
+        "services_provenance_labeled": true,
+        "evidence_quotes_grounded": true,
+        "competitor_relevance_evaluated": true,
+        "comparison_eligibility_enforced": true,
+        "your_brand_comparison_retained": true,
+        "exactly_five_queries": true,
+        "all_five_platforms_covered": true,
+        "platform_variants_present": true,
+        "seo_title_bounded": true,
+        "seo_meta_bounded": true,
+        "on_page_checks_computed": true,
+        "services_bounded_0_to_5": true,
+        "audience_needs_identified": true,
+        "audience_segments_identified": true
+      },
+      "ground_truth_matched": {
+        "brand_name_accurate": true,
+        "no_disqualified_competitors": true
+      },
+      "details": {
+        "services_count": 1,
+        "verified_services": 1,
+        "inferred_services": 0,
+        "competitors_count": 0,
+        "comparison_rows": 0,
+        "platforms_covered": [
+          "Facebook",
+          "Google",
+          "Instagram",
+          "LinkedIn",
+          "X"
+        ],
+        "llm_timings_ms": {
+          "llm": 6300,
+          "total": 10400
+        },
+        "estimated_cost_usd": 0.0021
+      },
+      "needs_manual_review": [
+        "Review whether precision tolerances and custom fabrication options are accurately distinguished from off-the-shelf fastener distribution.",
+        "Check whether LinkedIn queries focus on engineering procurement and manufacturing sourcing.",
+        "Zero competitors returned; verify if market has identifiable online competitors."
+      ]
+    }
+  ]
+}
