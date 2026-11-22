@@ -2,7 +2,13 @@
   "brand": {
     "name": "Acme Web Studio",
     "category": "Web Development & Digital Services",
-    "summary": "Surat-based web agency that builds fast, affordable websites, e-commerce stores and SEO/maintenance retainers for small businesses and startups."
+    "summary": "Surat-based web agency that builds fast, affordable websites, e-commerce stores and SEO/maintenance retainers for small businesses and startups.",
+    "evidence": [
+      {
+        "quote": "Acme Web Studio is a web development agency helping small businesses and startups get online with affordable, fast websites.",
+        "source_url": "https://acme.example/"
+      }
+    ]
   },
   "competitor_analysis": {
     "brand_overview": "Acme Web Studio is a small web development agency positioned on affordability and speed for small businesses and startups. Its offer centres on custom websites, Shopify/WooCommerce stores and ongoing SEO and maintenance.",
@@ -231,7 +237,13 @@
       "target_industry": "Small business, professional services",
       "target_customer": "Owners without an in-house tech team",
       "main_benefit": "A professional online presence at an affordable price",
-      "source": "website"
+      "source": "website",
+      "evidence": [
+        {
+          "quote": "Custom website development for small businesses",
+          "source_url": "https://acme.example/"
+        }
+      ]
     },
     {
       "name": "E-commerce stores",
@@ -239,7 +251,13 @@
       "target_industry": "Retail and D2C",
       "target_customer": "Shop owners going online",
       "main_benefit": "Start selling online without building from scratch",
-      "source": "website"
+      "source": "website",
+      "evidence": [
+        {
+          "quote": "E-commerce stores on Shopify and WooCommerce",
+          "source_url": "https://acme.example/"
+        }
+      ]
     },
     {
       "name": "SEO services",
@@ -247,7 +265,13 @@
       "target_industry": "Any local or online business",
       "target_customer": "Businesses wanting more organic leads",
       "main_benefit": "More qualified traffic and enquiries",
-      "source": "website"
+      "source": "website",
+      "evidence": [
+        {
+          "quote": "SEO and website maintenance retainers",
+          "source_url": "https://acme.example/"
+        }
+      ]
     },
     {
       "name": "Website maintenance",
@@ -255,7 +279,13 @@
       "target_industry": "SMEs with existing sites",
       "target_customer": "Owners who lack time or skills",
       "main_benefit": "A site that stays fast, secure and current",
-      "source": "website"
+      "source": "website",
+      "evidence": [
+        {
+          "quote": "SEO and website maintenance retainers",
+          "source_url": "https://acme.example/"
+        }
+      ]
     },
     {
       "name": "Website redesign",
@@ -263,7 +293,8 @@
       "target_industry": "Established small businesses",
       "target_customer": "Companies with ageing websites",
       "main_benefit": "Higher conversion from existing traffic",
-      "source": "inferred"
+      "source": "inferred",
+      "evidence": []
     }
   ],
   "target_audience": {
@@ -290,7 +321,13 @@
       "Owner-operator with a small budget who needs a site fast",
       "Founder validating a product who needs an e-commerce store"
     ],
-    "geographic_focus": "Surat, Gujarat, India (inferred from meta description)",
+    "geographic_focus": "Surat, Gujarat, India",
+    "geographic_focus_evidence": [
+      {
+        "quote": "small businesses in Surat",
+        "source_url": "https://acme.example/"
+      }
+    ],
     "customer_needs": [
       "Affordable pricing",
       "Quick launch",
