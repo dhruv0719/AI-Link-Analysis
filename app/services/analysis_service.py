@@ -11,6 +11,7 @@ from app.schemas import (
     Analysis, CompetitorAnalysis, LinkAnalysisResponse, LLMAnalysis, Meta, SeoImprovements,
 )
 from app.services.competitor_service import CompetitorService
+from app.services.grounding import ground_brand, ground_service, ground_target_audience
 from app.services.llm_service import LLMService
 from app.services.website_extractor import SiteContent, WebsiteExtractor, seo_audit
 from app.utils.cache import TTLCache
@@ -79,7 +80,7 @@ class AnalysisService:
         return response
 
     async def _assemble(self, parsed: LLMAnalysis, site: SiteContent, usage) -> LinkAnalysisResponse:
-        brand = parsed.brand
+        brand = ground_brand(parsed.brand, site.pages)
         if not brand.name.strip():
             brand.name = site.home.og.get("og:site_name") or (site.home.title or site.url)
 
@@ -95,6 +96,9 @@ class AnalysisService:
             current_page=current, on_page_checks=checks,
         )
 
+        grounded_services = [ground_service(s, site.pages) for s in parsed.top_services]
+        grounded_audience = ground_target_audience(parsed.target_audience, site.pages)
+
         notes = [NO_VOLUME_NOTE]
         if len(verified) < 3:
             notes.append("Fewer than 3 competitors were returned/kept: the model was told to omit companies it was not "
@@ -103,8 +107,30 @@ class AnalysisService:
             notes.append(f"Recommended title is {seo.recommended_title_length} chars (>60) and may be truncated in search results.")
         if not 70 <= seo.meta_description_length <= 160:
             notes.append(f"Recommended meta description is {seo.meta_description_length} chars (ideal 70-160).")
-        if any(s.source == "inferred" for s in parsed.top_services):
+
+        downgraded_count = sum(
+            1 for orig, g in zip(parsed.top_services, grounded_services)
+            if orig.source == "website" and g.source == "inferred"
+        )
+        if downgraded_count > 0:
+            notes.append(
+                f"{downgraded_count} service(s) claimed as website facts lacked verifiable source quotations "
+                "and were downgraded to 'inferred'."
+            )
+        elif any(s.source == "inferred" for s in grounded_services):
             notes.append("Services with source='inferred' were not explicitly listed on the analysed pages.")
+
+        if grounded_audience.geographic_focus:
+            if grounded_audience.geographic_focus_provenance == "website_verified":
+                notes.append("Geographic focus is website-verified with source quotation evidence.")
+            else:
+                notes.append("Geographic focus is an AI inference; no verified website address quotation was matched.")
+
+        notes.append(
+            "Customer profiles, needs, challenges, and marketing segments are AI-generated inferences "
+            "and recommendations, not website-verified facts."
+        )
+
         if any(p.truncated_source for p in site.pages):
             notes.append("A page was larger than the size cap; only its first part was analysed.")
 
@@ -115,8 +141,8 @@ class AnalysisService:
                 competitor_analysis=competitor_analysis,
                 target_search_queries=parsed.target_search_queries,
                 seo_improvements=seo,
-                top_services=parsed.top_services,
-                target_audience=parsed.target_audience,
+                top_services=grounded_services,
+                target_audience=grounded_audience,
             ),
             meta=Meta(
                 provider=usage.provider, model=usage.model, pages_analyzed=[p.url for p in site.pages],
