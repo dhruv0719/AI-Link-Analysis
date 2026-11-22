@@ -144,14 +144,15 @@ def test_js_only_page_reports_insufficient_content(api):
 
 # ----------------------------------------------------------------------------- LLM failures
 def test_invalid_json_is_repaired_with_error_feedback(api):
-    broken = {**LLM_OUTPUT, "top_services": LLM_OUTPUT["top_services"][:4]}      # only 4 services
+    extra = LLM_OUTPUT["top_services"][0]
+    broken = {**LLM_OUTPUT, "top_services": LLM_OUTPUT["top_services"] + [extra]}  # 6 services -> exceeds max 5
     service, provider, _ = build(script=[json.dumps(broken), json.dumps(LLM_OUTPUT)])
     r = api(service).post("/link-analysis", json={"url": "https://acme.example"})
     assert r.status_code == 200
     meta = r.json()["meta"]
     assert meta["repaired_output"] is True and meta["llm_calls"] == 2
-    assert "top_services must contain exactly 5" in provider.prompts[1]            # validator errors were fed back
-    assert "top_services must contain exactly 5" not in provider.prompts[0]
+    assert "top_services cannot contain more than 5 items" in provider.prompts[1]            # validator errors were fed back
+    assert "top_services cannot contain more than 5 items" not in provider.prompts[0]
 
 
 def test_markdown_fenced_json_is_accepted(api):

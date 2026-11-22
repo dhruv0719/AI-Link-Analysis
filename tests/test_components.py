@@ -187,10 +187,10 @@ def test_prompt_example_matches_schema():
 def test_platform_aliases_and_trimming():
     data = json.loads(json.dumps(LLM_OUTPUT))
     data["target_search_queries"][0]["platforms"] = ["Twitter", "google search", "FB", "TikTok"]
-    data["top_services"] = data["top_services"] * 2          # 10 services -> trimmed to 5
+    data["target_search_queries"] = data["target_search_queries"] * 2  # 10 queries -> trimmed to 5
     parsed = LLMAnalysis.model_validate(data)
     assert parsed.target_search_queries[0].platforms == ["X", "Google", "Facebook"]
-    assert len(parsed.top_services) == 5
+    assert len(parsed.target_search_queries) == 5
 
 
 def test_parse_json_text_variants():
