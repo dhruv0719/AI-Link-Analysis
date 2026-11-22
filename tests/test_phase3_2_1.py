@@ -194,6 +194,10 @@ def test_service_supported_by_paragraph_verifies_description():
         source="website",
         evidence=[
             Evidence(
+                quote="Cloud Infrastructure Management",
+                source_url="https://example.com/services",
+            ),
+            Evidence(
                 quote="We provide 24/7 proactive monitoring, automated backups, and instant incident response",
                 source_url="https://example.com/services",
             )
@@ -244,7 +248,7 @@ def test_brand_verified_from_title_and_og():
         summary="Digital marketing and branding agency in Surat.",
         evidence=[
             Evidence(
-                quote="Printing Services(Visiting Card, Letterheads, Envelopes)to help you establish your brand",
+                quote="Jay Jagle Innovations | Digital Marketing & Web Development Agency",
                 source_url="https://www.jayjagleinnovations.com/",
             )
         ],
