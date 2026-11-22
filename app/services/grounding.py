@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import parse_qsl, urldefrag, urlencode, urljoin, urlparse, urlunparse
 
 from app.schemas import Brand, Evidence, Provenance, Service, TargetAudience
 from app.services.website_extractor import PageContent
@@ -88,57 +88,109 @@ def page_search_corpus(page: PageContent) -> str:
     return " ".join(elements)
 
 
-def _canonical_url_tuple(u: str) -> tuple[str, str]:
-    """Return (hostname_without_www, normalized_path) for URL matching."""
+def canonicalize_url(u: str) -> str:
+    """Canonicalize a URL for strict deterministic comparison without collisions.
+
+    - Strips fragment (#...).
+    - Standardizes scheme and host to lowercase.
+    - Strips default ports (:80 for http, :443 for https).
+    - Normalizes path: redundant slashes removed, trailing slash stripped (unless root '/').
+    - Canonicalizes query string with sorted key-value pairs (preserving parameters).
+    - Preserves domain and www prefix (does NOT strip www. or drop query strings).
+    """
+    if not u or not u.strip():
+        return ""
     clean_u, _ = urldefrag(u.strip())
     parsed = urlparse(clean_u)
-    host = (parsed.hostname or "").lower()
-    if host.startswith("www."):
-        host = host[4:]
-    path = parsed.path.rstrip("/") or "/"
-    return (host, path)
+    scheme = (parsed.scheme or "https").lower()
+    netloc = (parsed.netloc or "").lower()
+
+    if ":" in netloc:
+        host, port = netloc.split(":", 1)
+        if (scheme == "http" and port == "80") or (scheme == "https" and port == "443"):
+            netloc = host
+
+    path = parsed.path or "/"
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+
+    query = ""
+    if parsed.query:
+        params = sorted(parse_qsl(parsed.query, keep_blank_values=True))
+        query = urlencode(params)
+
+    return urlunparse((scheme, netloc, path, "", query, ""))
 
 
 def find_matching_page(source_url: str, pages: list[PageContent]) -> PageContent | None:
-    """Find the fetched page matching source_url using robust URL comparison.
+    """Find the fetched page matching source_url using collision-safe multi-tier matching.
 
-    Handles:
-    - Trailing slashes
-    - Relative URLs (resolving against pages[0].url if available)
-    - www. vs non-www. hostname differences
-    - URL fragments / anchors
-    - Case insensitivity
+    Guarantees:
+    - Never collides between two distinct fetched pages (e.g. example.com vs www.example.com,
+      or /products?category=shoes vs /products?category=hats).
+    - Resolves relative URLs against the base page (pages[0].url).
+    - Matches recorded redirect aliases (from PageContent.aliases) unambiguously.
+    - Allows unambiguous www-prefix mismatch ONLY when exact parameters and path match
+      and exactly one page in the fetched pages set matches (fails closed if ambiguous).
+    - Ignores client-side fragments (#...) deterministically.
     """
     if not source_url or not pages:
         return None
 
     base_url = pages[0].url if pages and pages[0].url else ""
     full_target = urljoin(base_url, source_url.strip()) if base_url else source_url.strip()
-
-    target_host, target_path = _canonical_url_tuple(full_target)
-    if not target_host and not target_path:
+    target_canon = canonicalize_url(full_target)
+    if not target_canon:
         return None
 
-    # 1. Exact canonical (host, path) match
+    # Tier 1: Exact canonical match against page.url
     for p in pages:
-        p_host, p_path = _canonical_url_tuple(p.url)
-        if target_host == p_host and target_path == p_path:
+        if target_canon == canonicalize_url(p.url):
             return p
 
-    # 2. Root page fallback if target has root path and host matches
-    if target_path == "/":
-        for p in pages:
-            p_host, p_path = _canonical_url_tuple(p.url)
-            if target_host == p_host and p_path == "/":
-                return p
+    # Tier 2: Match against recorded redirect / canonical aliases of pages
+    alias_matches: list[PageContent] = []
+    for p in pages:
+        p_aliases = getattr(p, "aliases", []) or []
+        for alias in p_aliases:
+            if target_canon == canonicalize_url(alias):
+                if p not in alias_matches:
+                    alias_matches.append(p)
+                break
+    if len(alias_matches) == 1:
+        return alias_matches[0]
+    elif len(alias_matches) > 1:
+        # Ambiguous alias collision - refuse to guess
+        return None
 
-    # 3. Path-only match if host was empty or matches base host
-    base_host, _ = _canonical_url_tuple(base_url)
-    if not target_host or target_host == base_host:
-        for p in pages:
-            _, p_path = _canonical_url_tuple(p.url)
-            if target_path == p_path:
-                return p
+    # Parse target components for relaxed unambiguous fallback
+    target_parsed = urlparse(target_canon)
+    target_host = target_parsed.hostname or ""
+    target_path = target_parsed.path or "/"
+    target_query = target_parsed.query
+
+    # Tier 3: Unambiguous www-prefix mismatch (only if path and query match EXACTLY)
+    # Allows matching when the LLM outputs non-www apex but page is www (or vice versa),
+    # provided there is NO ambiguity and NO collision.
+    target_host_apex = target_host.removeprefix("www.")
+    www_matches: list[PageContent] = []
+    for p in pages:
+        p_canon = canonicalize_url(p.url)
+        p_parsed = urlparse(p_canon)
+        p_host = p_parsed.hostname or ""
+        p_host_apex = p_host.removeprefix("www.")
+        p_path = p_parsed.path or "/"
+        p_query = p_parsed.query
+
+        if (
+            target_host_apex == p_host_apex
+            and target_path == p_path
+            and target_query == p_query
+        ):
+            www_matches.append(p)
+
+    if len(www_matches) == 1:
+        return www_matches[0]
 
     return None
 
@@ -149,29 +201,43 @@ def match_quote_in_corpus(norm_quote: str, norm_corpus: str) -> bool:
         return False
     if norm_quote in norm_corpus:
         return True
-    # Strip trailing punctuation (. , ; : ! ? -) and check again
     stripped_quote = norm_quote.rstrip(". , ; : ! ? -")
     if len(stripped_quote) >= 6 and stripped_quote in norm_corpus:
         return True
     return False
 
 
-def validate_evidence(ev: Evidence, pages: list[PageContent]) -> bool:
-    """Verify that an Evidence item's quote exists in the corresponding fetched page content."""
+def verify_and_canonicalize_evidence(
+    ev: Evidence, pages: list[PageContent]
+) -> Evidence | None:
+    """Verify that an Evidence quote exists in the corresponding fetched page and return
+    a canonicalized Evidence object pointing to the actual fetched page URL.
+
+    Returns None if the evidence is invalid, fabricated, or misattributed.
+    """
     if not ev or not ev.quote or not ev.source_url:
-        return False
+        return None
 
     norm_quote = normalize_text_for_matching(ev.quote)
     cleaned_quote = norm_quote.strip(_STRIP_PUNCT)
     if len(cleaned_quote) < 6:
-        return False
+        return None
 
     matched_page = find_matching_page(ev.source_url, pages)
     if not matched_page:
-        return False
+        return None
 
     corpus = normalize_text_for_matching(page_search_corpus(matched_page))
-    return match_quote_in_corpus(norm_quote, corpus) or match_quote_in_corpus(cleaned_quote, corpus)
+    if match_quote_in_corpus(norm_quote, corpus) or match_quote_in_corpus(cleaned_quote, corpus):
+        # Update source_url to the actual fetched page URL, not an alias, relative path, or fragment
+        return ev.model_copy(update={"source_url": matched_page.url})
+
+    return None
+
+
+def validate_evidence(ev: Evidence, pages: list[PageContent]) -> bool:
+    """Verify that an Evidence item's quote exists in the corresponding fetched page content."""
+    return verify_and_canonicalize_evidence(ev, pages) is not None
 
 
 def is_generic_boilerplate_quote(quote: str, brand_name: str | None = None) -> bool:
@@ -224,14 +290,18 @@ def is_brand_name_verified(brand_name: str, pages: list[PageContent]) -> bool:
 
 
 def ground_brand(brand: Brand, pages: list[PageContent]) -> Brand:
-    """Validate brand evidence and set brand name, summary, and overall provenance."""
+    """Validate brand evidence and set brand name, summary, and overall provenance.
+
+    Guarantees returned evidence objects point to the actual fetched page URL.
+    """
     name_verified = is_brand_name_verified(brand.name, pages)
     name_prov: Provenance = "website_verified" if name_verified else "inferred"
 
-    valid_ev = [
-        ev for ev in brand.evidence
-        if validate_evidence(ev, pages) and not is_generic_boilerplate_quote(ev.quote, brand.name)
-    ]
+    valid_ev: list[Evidence] = []
+    for ev in brand.evidence:
+        canonical_ev = verify_and_canonicalize_evidence(ev, pages)
+        if canonical_ev and not is_generic_boilerplate_quote(canonical_ev.quote, brand.name):
+            valid_ev.append(canonical_ev)
 
     summary_prov: Provenance = "website_verified" if valid_ev else "inferred"
     overall_prov: Provenance = "website_verified" if (name_verified and valid_ev) else "inferred"
@@ -252,8 +322,13 @@ def ground_service(service: Service, pages: list[PageContent]) -> Service:
     - If source='inferred': retained as 'inferred' with provenance='inferred'.
     - description_provenance: 'website_verified' if the description is directly grounded in website text,
       otherwise 'inferred'.
+    - Verified evidence objects point to the actual fetched page URL.
     """
-    valid_ev = [ev for ev in service.evidence if validate_evidence(ev, pages)]
+    valid_ev = [
+        canonical_ev
+        for ev in service.evidence
+        if (canonical_ev := verify_and_canonicalize_evidence(ev, pages)) is not None
+    ]
 
     desc_prov: Provenance = "inferred"
     if service.description and len(service.description.strip()) >= 10:
@@ -293,7 +368,10 @@ def ground_service(service: Service, pages: list[PageContent]) -> Service:
 def ground_target_audience(
     audience: TargetAudience, pages: list[PageContent]
 ) -> TargetAudience:
-    """Validate geographic focus evidence and establish audience provenance."""
+    """Validate geographic focus evidence and establish audience provenance.
+
+    Guarantees returned evidence objects point to the actual fetched page URL.
+    """
     geo = audience.geographic_focus
     if not geo or not geo.strip():
         return audience.model_copy(update={
@@ -304,8 +382,9 @@ def ground_target_audience(
         })
 
     valid_geo_ev = [
-        ev for ev in audience.geographic_focus_evidence
-        if validate_evidence(ev, pages)
+        canonical_ev
+        for ev in audience.geographic_focus_evidence
+        if (canonical_ev := verify_and_canonicalize_evidence(ev, pages)) is not None
     ]
 
     if valid_geo_ev:
