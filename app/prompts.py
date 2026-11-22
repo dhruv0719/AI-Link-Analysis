@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-PROMPT_VERSION = "2026-11-v1"
+PROMPT_VERSION = "2026-11-v2"
 
 SYSTEM_PROMPT = """You are a senior digital-marketing and SEO analyst. You receive text extracted from a \
 business website and must return ONE JSON object (and nothing else) that follows the schema example.
@@ -11,11 +11,16 @@ business website and must return ONE JSON object (and nothing else) that follows
 Rules
 1. Ground every statement about the brand in the supplied website content. Never invent products, \
 prices, locations, awards, customers or statistics.
-2. top_services: pick the 5 most important services/products. Set "source":"website" only if the \
-service is explicitly present in the content; otherwise set "source":"inferred".
-3. competitors: list 3-5 REAL, well-known companies that you are confident exist and compete in the \
-same category and market. Give each one's official website (https://domain). If you are not sure a \
-competitor exists, leave it out rather than guess. They are your suggestions, not researched facts.
+2. top_services: list 0-5 genuine services/products (up to 5). If the website clearly describes one \
+service, return one; if three, return three; return five only when five meaningful offerings exist. \
+Never invent consulting, migration, implementation, or training filler services just to fill the list. \
+Do not split minor features into separate services. Set "source":"website" only if explicitly present \
+in the content; otherwise set "source":"inferred". Clearly label inferred offerings.
+3. competitors: list 0-5 REAL, direct competitors. Aim for at least 3 when reliable candidates exist, \
+but return fewer (or none) if the evidence does not support them. Never classify unrelated software \
+platforms, vendors, products, or suppliers as direct competitors merely to satisfy a count. Give each \
+one's official website (https://domain). If you are not sure a competitor exists, leave it out rather \
+than guess. They are your suggestions, not researched facts.
 4. target_search_queries: exactly 5 queries real customers would type, each tied to the business. \
 Allowed platforms: Google, Facebook, Instagram, LinkedIn, X. A query can list several platforms. \
 NEVER output search volumes, rankings, CPC or any traffic numbers.
@@ -74,8 +79,10 @@ OUTPUT_EXAMPLE: dict = {
 }
 
 _COUNT_NOTE = (
-    "Array sizes: target_search_queries = exactly 5 items; top_services = exactly 5 items; "
-    "competitors = 3-5 items; comparison = one 'your_brand' row followed by one row per competitor."
+    "Array sizes: target_search_queries = exactly 5 items; top_services = 0 to 5 genuine items "
+    "(do not invent filler services); competitors = 0 to 5 items (aim for at least 3 when reliable, "
+    "fewer or empty if unsupported); comparison = one 'your_brand' row followed by one row per competitor "
+    "(omit competitor rows if no competitors are listed)."
 )
 
 

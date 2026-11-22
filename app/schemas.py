@@ -1,7 +1,7 @@
 """Pydantic models: API request/response and the structure the LLM must return."""
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -80,6 +80,29 @@ class CompetitorAnalysisLLM(_Base):
     comparison: list[ComparisonEntry] = Field(default_factory=list)
     strengths: list[str] = Field(default_factory=list, description="Competitive advantages of the brand")
     opportunities: list[str] = Field(default_factory=list, description="Ways to improve market positioning")
+
+    @field_validator("competitors")
+    @classmethod
+    def _validate_competitors(cls, v):
+        if len(v) > 5:
+            raise ValueError(f"competitors cannot contain more than 5 items, got {len(v)}")
+        return v
+
+    @model_validator(mode="after")
+    def _align_comparison(self) -> Self:
+        if not self.competitors:
+            self.comparison = [c for c in self.comparison if c.role == "your_brand"]
+        else:
+            comp_names = {c.name.strip().lower() for c in self.competitors if c.name}
+            aligned = [
+                c for c in self.comparison
+                if c.role == "your_brand" or c.brand_name.strip().lower() in comp_names
+            ]
+            if not any(c.role == "competitor" for c in aligned) and any(c.role == "competitor" for c in self.comparison):
+                comp_rows = [c for c in self.comparison if c.role == "competitor"][:len(self.competitors)]
+                aligned = [c for c in self.comparison if c.role == "your_brand"] + comp_rows
+            self.comparison = aligned
+        return self
 
 
 class SearchQuery(_Base):
@@ -170,7 +193,7 @@ class LLMAnalysis(_Base):
     competitor_analysis: CompetitorAnalysisLLM
     target_search_queries: list[SearchQuery]
     seo_improvements: SeoLLM
-    top_services: list[Service]
+    top_services: list[Service] = Field(default_factory=list)
     target_audience: TargetAudience
 
     @model_validator(mode="before")
@@ -179,7 +202,6 @@ class LLMAnalysis(_Base):
         if isinstance(data, dict):
             data = dict(data)
             data["target_search_queries"] = _truncate_list(data.get("target_search_queries"), 5)
-            data["top_services"] = _truncate_list(data.get("top_services"), 5)
         return data
 
     @field_validator("target_search_queries")
@@ -191,9 +213,9 @@ class LLMAnalysis(_Base):
 
     @field_validator("top_services")
     @classmethod
-    def _five_services(cls, v):
-        if len(v) != 5:
-            raise ValueError(f"top_services must contain exactly 5 items, got {len(v)}")
+    def _validate_services(cls, v):
+        if len(v) > 5:
+            raise ValueError(f"top_services cannot contain more than 5 items, got {len(v)}")
         return v
 
 
