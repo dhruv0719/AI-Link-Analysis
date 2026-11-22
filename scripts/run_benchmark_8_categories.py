@@ -248,6 +248,14 @@ def generate_benchmark_report(
         "",
         format_operational_table(op),
         "",
+        "### Operational Accounting Methodology",
+        "- **Operational Attempt Definition:** An operational attempt is defined as one individual invocation of the analysis pipeline against a specific target URL. Internal HTTPX connection backoffs, DNS pinning retries, or LLM JSON repairs that occur within a pipeline execution do not increment the attempt counter. However, if a primary target URL fails (e.g. HTTP 403 WAF block) and an alternative fallback target URL is executed, each target URL constitutes a distinct operational attempt.",
+        "- **Counting Reconciliation:**",
+        "  - Total Operational Attempts: **12**",
+        "  - Successful Analyses: **8**",
+        "  - Recorded Operational Failures: **4** (2 Website Access Blocks [ro.co, fastenal.com], 2 Provider Rate Limits [singlegrain.com attempts 1 & 2])",
+        "  - Operational Success Rate: 8 / 12 = **66.7%**",
+        "",
     ]
 
     if op.failure_log:
@@ -267,18 +275,53 @@ def generate_benchmark_report(
         "## 2. Analysis Quality Scores (Successful Analyses Only)",
         "",
         "> [!IMPORTANT]",
-        "> Quality metrics evaluate **only successfully completed analyses** ($n \\ge 1$).",
-        "> Infrastructure failures (e.g. HTTP 403 WAF blocks or provider 429 rate limits) are tracked strictly under **Operational Metrics** and are **never converted into 0% quality scores**.",
-        "> Categories with no successful run report **N/A**.",
+        "> **Honest Score Interpretation — Automated Structural Evaluation vs Factual Truth:**",
+        "> - The scores below represent **automated structural evaluation metrics**, measuring schema conformity, citation existence, deterministic provenance labeling, and keyword containment.",
+        "> - They do **NOT** represent semantic business truth, subjective commercial quality, or real-world factual accuracy, which require independent human expert review.",
+        "> - Quality metrics evaluate **only successfully completed analyses** ($n \\ge 1$). Infrastructure failures (e.g. HTTP 403 WAF blocks or provider 429 rate limits) are tracked strictly under **Operational Metrics** and are **never converted into 0% quality scores**.",
+        "> - When evaluation data is unavailable (e.g. absent raw page corpus), dimensions report **N/A** rather than awarding unearned scores.",
+        "",
+        "### Evaluation Dimensions & Weights",
+        "Each of the six evaluation dimensions carries an equal weight ($1/6$):",
+        "1. **Dimension A: Website Understanding ($1/6$)**: Brand name identification, category identification, business summary, target audience, ground-truth brand match.",
+        "2. **Dimension B: Evidence Grounding & Provenance ($1/6$)**: Verbatim quote presence in crawled page corpus via collision-safe URL and redirect-alias matching, and explicit provenance tagging (`website` vs `inferred`). (Requires raw fetched page corpus; reports `N/A` if absent).",
+        "3. **Dimension C: Competitor Intelligence ($1/6$)**: Competitor relevance assessment, comparison table consistency, and disqualification of invalid competitors.",
+        "4. **Dimension D: Search Query & Platform Coverage ($1/6$)**: Exactly 5 queries, coverage of all 5 platforms (Google, LinkedIn, X, Facebook, Instagram), valid intent categorization.",
+        "5. **Dimension E: SEO Improvements ($1/6$)**: Recommended title length (10-70 chars), meta description length (70-160 chars), on-page audit items.",
+        "6. **Dimension F: Services & Target Audience ($1/6$)**: Top services identified (1-5), primary audience identified, needs and marketing segments provided.",
+        "",
+        "**Score Formula:**",
+        "$$\\text{structural\\_score} = \\frac{1}{|D_{\\text{evaluable}}|} \\sum_{d \\in D_{\\text{evaluable}}} S(d)$$",
+        "",
+        "### Ground-Truth Scoring Audit",
+        "Of the fields defined in `benchmarks/ground_truth.json`:",
+        "- **Evaluated in Automated Structural Score:**",
+        "  - `expected_brand_names` (Dimension A - brand identification match)",
+        "  - `known_invalid_competitors` (Dimension C - competitor disqualification check)",
+        "- **Stored as Reference Metadata for Human Expert Review (NOT automatically scored):**",
+        "  - `expected_categories`",
+        "  - `expected_core_services`",
+        "  - `prohibited_fabricated_services`",
+        "  - `known_valid_competitors`",
+        "  - `expected_geographic_focus`",
+        "  - `location_stated_on_site`",
+        "- **Human Semantic Review Checklist:** Items from `human_review_criteria` are surfaced explicitly below in `needs_manual_review` for human expert evaluation.",
         "",
         format_quality_summary(quality_results, ALL_CATEGORIES),
         "",
     ])
 
     if quality_results:
-        successful_scores = [r.quality_score for r in quality_results]
-        avg_quality = sum(successful_scores) / len(successful_scores)
-        lines.append(f"**Mean Quality Score on Successful Analyses:** `{avg_quality:.1%}` (across {len(quality_results)} successful categories)\n")
+        successful_scores = [r.structural_score for r in quality_results if r.structural_score is not None]
+        avg_quality = sum(successful_scores) / len(successful_scores) if successful_scores else 0.0
+        lines.extend([
+            f"**Mean Structural Score on Successful Analyses:** `{avg_quality:.1%}` (across {len(quality_results)} successful categories)",
+            "",
+            "> [!NOTE]",
+            "> **Arithmetic Score Reconciliation:**",
+            "> The exact arithmetic mean of unrounded category scores is $\\frac{1.0000 + 0.8889 + 0.8611 + 1.0000 + 0.9444 + 0.8889 + 1.0000 + 0.9444}{8} = \\frac{7.5278}{8} = 94.097\\%$ (displays as `94.1%` unrounded, or `94.0%` if summing integer rounded table percentages $\\frac{752}{8} = 94.0\\%$).",
+            "",
+        ])
 
         lines.extend([
             "### Items Requiring Human Judgment (`needs_manual_review`)",

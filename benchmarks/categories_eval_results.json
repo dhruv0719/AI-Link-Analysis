@@ -45,7 +45,7 @@
       "url": "https://plausible.io/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 1.0,
+      "structural_quality_score": 1.0,
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
@@ -111,7 +111,7 @@
       "url": "https://www.teladochealth.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 1.0,
+      "structural_quality_score": 1.0,
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
@@ -177,8 +177,8 @@
       "url": "https://www.coursera.org/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 0.94,
-      "overall_score": 0.94,
+      "structural_quality_score": 0.945,
+      "overall_score": 0.945,
       "scores": {
         "website_understanding": 1.0,
         "grounding_accuracy": 1.0,
@@ -243,8 +243,8 @@
       "url": "https://www.emachineshop.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 0.94,
-      "overall_score": 0.94,
+      "structural_quality_score": 0.945,
+      "overall_score": 0.945,
       "scores": {
         "website_understanding": 1.0,
         "grounding_accuracy": 1.0,
@@ -309,7 +309,7 @@
       "url": "https://www.singlegrain.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 0.86,
+      "structural_quality_score": 0.86,
       "overall_score": 0.86,
       "scores": {
         "website_understanding": 1.0,
@@ -375,8 +375,8 @@
       "url": "https://www.allbirds.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 0.89,
-      "overall_score": 0.89,
+      "structural_quality_score": 0.8883,
+      "overall_score": 0.8883,
       "scores": {
         "website_understanding": 1.0,
         "grounding_accuracy": 1.0,
@@ -441,8 +441,8 @@
       "url": "https://www.rotorooter.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 0.89,
-      "overall_score": 0.89,
+      "structural_quality_score": 0.8883,
+      "overall_score": 0.8883,
       "scores": {
         "website_understanding": 1.0,
         "grounding_accuracy": 1.0,
@@ -507,7 +507,7 @@
       "url": "https://github.com/",
       "is_fixture": false,
       "sample_size": 1,
-      "quality_score": 1.0,
+      "structural_quality_score": 1.0,
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
@@ -579,7 +579,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -591,7 +591,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -610,6 +610,7 @@
         "no_disqualified_competitors": true
       },
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -643,7 +644,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -655,7 +656,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -674,6 +675,7 @@
         "no_disqualified_competitors": true
       },
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -707,7 +709,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -719,7 +721,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -735,6 +737,7 @@
       },
       "ground_truth_matched": {},
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -766,7 +769,7 @@
       "overall_score": 0.98,
       "scores": {
         "website_understanding": 0.9,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -778,7 +781,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -797,6 +800,7 @@
         "no_disqualified_competitors": true
       },
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -830,7 +834,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -842,7 +846,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -861,6 +865,7 @@
         "no_disqualified_competitors": true
       },
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -894,7 +899,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -906,7 +911,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -922,6 +927,7 @@
       },
       "ground_truth_matched": {},
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -953,7 +959,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -965,7 +971,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -981,6 +987,7 @@
       },
       "ground_truth_matched": {},
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,
@@ -1012,7 +1019,7 @@
       "overall_score": 1.0,
       "scores": {
         "website_understanding": 1.0,
-        "grounding_accuracy": 1.0,
+        "grounding_accuracy": null,
         "competitor_intelligence": 1.0,
         "search_query_quality": 1.0,
         "seo_quality": 1.0,
@@ -1024,7 +1031,7 @@
         "summary_adequate": true,
         "audience_identified": true,
         "services_provenance_labeled": true,
-        "evidence_quotes_grounded": true,
+        "evidence_quotes_grounded": false,
         "competitor_relevance_evaluated": true,
         "comparison_eligibility_enforced": true,
         "your_brand_comparison_retained": true,
@@ -1043,6 +1050,7 @@
         "no_disqualified_competitors": true
       },
       "details": {
+        "grounding_status": "unverified_pages_unavailable",
         "services_count": 1,
         "verified_services": 1,
         "inferred_services": 0,

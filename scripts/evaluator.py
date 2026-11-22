@@ -1,11 +1,35 @@
 """Evaluation framework for AI Website Link Analysis API.
 
-Distinguishes between:
-1. Operational Reliability: Network access, rate limits, payload limits, timeouts, and success rate.
-2. Analysis Quality: Evaluated exclusively on successfully completed analyses against objective criteria and ground truth.
-3. Offline Fixture Consistency: Validates prepared fixtures for schema conformity and pipeline invariants.
+Integrity & Evaluation Methodology:
+-----------------------------------
+1. Automated Structural Evaluation:
+   Measures schema conformity, constraint adherence, deterministic URL/provenance structures,
+   and basic keyword matches. It does NOT represent subjective semantic quality, factual truth,
+   or real-world commercial accuracy, which require independent human expert review.
 
-Where human judgment is required, items are explicitly marked with `needs_manual_review`.
+2. Dimensions & Weights:
+   - Dimension A: Website Understanding (Weight: 1/6)
+   - Dimension B: Evidence Grounding & Provenance (Weight: 1/6) [Requires raw fetched pages; reports N/A if absent]
+   - Dimension C: Competitor Intelligence & Comparison Integrity (Weight: 1/6)
+   - Dimension D: Search Query & Platform Coverage (Weight: 1/6)
+   - Dimension E: SEO Improvements & On-Page Audit (Weight: 1/6)
+   - Dimension F: Services & Target Audience (Weight: 1/6)
+
+   Formula:
+       structural_score = sum(S(d) for d in available_dimensions) / len(available_dimensions)
+
+3. Ground-Truth Scoring Audit:
+   Of the fields defined in `benchmarks/ground_truth.json`:
+   - Evaluated in automated score: `expected_brand_names`, `known_invalid_competitors`.
+   - Stored as reference metadata for human review (NOT automatically scored):
+     `expected_categories`, `expected_core_services`, `prohibited_fabricated_services`,
+     `known_valid_competitors`, `expected_geographic_focus`, `location_stated_on_site`.
+   - Human review criteria: surfaced explicitly in `needs_manual_review`.
+
+4. Operational Reliability Accounting:
+   - Operational Attempt: One invocation of analysis against a specific target URL.
+   - Internal transport/LLM retries occur within an attempt and do not increment attempt counts.
+   - Primary site + fallback site = 2 operational attempts across 1 category evaluation.
 """
 from __future__ import annotations
 
@@ -15,15 +39,36 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, get_args
 
 from app.schemas import LinkAnalysisResponse, Platform
-from app.services.grounding import normalize_text_for_matching
+from app.services.grounding import (
+    canonicalize_url,
+    find_matching_page,
+    normalize_text_for_matching,
+    page_search_corpus,
+)
 from app.services.website_extractor import PageContent
 
 ALL_SUPPORTED_PLATFORMS = get_args(Platform)
 GROUND_TRUTH_PATH = Path("benchmarks/ground_truth.json")
 
+# Explicit audit of which ground-truth fields are scored vs reference metadata
+GROUND_TRUTH_EVALUATED_FIELDS = [
+    "expected_brand_names",       # Evaluated in Dimension A (brand identification match)
+    "known_invalid_competitors",   # Evaluated in Dimension C (disqualification check)
+]
+GROUND_TRUTH_REFERENCE_METADATA_FIELDS = [
+    "expected_categories",            # Reference metadata for manual human review
+    "expected_core_services",         # Reference metadata for manual human review
+    "prohibited_fabricated_services", # Reference metadata for manual human review
+    "known_valid_competitors",        # Reference metadata for manual human review
+    "expected_geographic_focus",      # Reference metadata for manual human review
+    "location_stated_on_site",        # Reference metadata for manual human review
+    "human_review_criteria",          # Exposed in needs_manual_review checklist
+]
+
 
 @dataclass
 class OperationalMetrics:
+    """Tracks operational execution boundaries across all distinct URL attempts."""
     total_attempts: int = 0
     successful_analyses: int = 0
     website_access_failures: int = 0   # HTTP 403, 401, bot protection
@@ -88,7 +133,7 @@ class EvaluationResult:
         self.url = url
         self.is_fixture = is_fixture
         self.sample_size: int = 1
-        self.scores: Dict[str, float] = {}
+        self.scores: Dict[str, Optional[float]] = {}
         self.checks: Dict[str, bool] = {}
         self.details: Dict[str, Any] = {}
         self.needs_manual_review: List[str] = []
@@ -99,30 +144,37 @@ class EvaluationResult:
         return self.needs_manual_review
 
     @property
+    def structural_score(self) -> Optional[float]:
+        """Calculates unrounded mean across available, evaluable dimensions."""
+        valid_scores = [v for v in self.scores.values() if v is not None]
+        if not valid_scores:
+            return None
+        return sum(valid_scores) / len(valid_scores)
+
+    @property
     def quality_score(self) -> float:
-        if not self.scores:
-            return 0.0
-        return sum(self.scores.values()) / len(self.scores)
+        # Kept for backward compatibility
+        return self.structural_score or 0.0
 
     @property
     def fixture_consistency_score(self) -> float:
-        return self.quality_score
+        return self.structural_score or 0.0
 
     @property
     def overall_score(self) -> float:
-        # Kept for backwards compatibility
-        return self.quality_score
+        return self.structural_score or 0.0
 
     def to_dict(self) -> dict:
-        score_key = "fixture_consistency_score" if self.is_fixture else "quality_score"
+        score_val = round(self.structural_score, 4) if self.structural_score is not None else None
+        score_key = "fixture_consistency_score" if self.is_fixture else "structural_quality_score"
         return {
             "category": self.category,
             "url": self.url,
             "is_fixture": self.is_fixture,
             "sample_size": self.sample_size,
-            score_key: round(self.quality_score, 2),
-            "overall_score": round(self.quality_score, 2),
-            "scores": {k: round(v, 2) for k, v in self.scores.items()},
+            score_key: score_val,
+            "overall_score": score_val,
+            "scores": {k: (round(v, 4) if v is not None else None) for k, v in self.scores.items()},
             "checks": self.checks,
             "ground_truth_matched": self.ground_truth_matched,
             "details": self.details,
@@ -146,7 +198,12 @@ def evaluate_analysis(
     is_fixture: bool = False,
     ground_truth: Optional[dict] = None,
 ) -> EvaluationResult:
-    """Evaluate an analysis response dict against objective quality criteria and ground truth."""
+    """Evaluate an analysis response dict against objective structural criteria and ground truth.
+
+    NOTE:
+    - If `pages` is None (e.g. offline fixture mode without raw page corpus), Dimension B
+      (Evidence Grounding) is marked as None (N/A) rather than awarding an unearned score.
+    """
     url = data.get("website", "")
     ev = EvaluationResult(category=category, url=url, is_fixture=is_fixture)
     brand = data.get("brand", {})
@@ -170,10 +227,10 @@ def evaluate_analysis(
     has_summary = bool(brand.get("summary") and len(brand["summary"].strip()) >= 20)
     has_target_audience = bool(analysis.get("target_audience", {}).get("primary_audience"))
 
-    # Ground truth brand/category match
-    if expected_facts:
-        expected_brands = [b.lower() for b in expected_facts.get("expected_brand_names", [])]
-        brand_matched = any(b in brand_name.lower() or brand_name.lower() in b for b in expected_brands) if expected_brands else True
+    # Ground truth brand match check (evaluated field)
+    if expected_facts and "expected_brand_names" in expected_facts:
+        expected_brands = [b.lower() for b in expected_facts["expected_brand_names"]]
+        brand_matched = any(b in brand_name.lower() or brand_name.lower() in b for b in expected_brands)
         ev.ground_truth_matched["brand_name_accurate"] = brand_matched
     else:
         brand_matched = True
@@ -187,35 +244,44 @@ def evaluate_analysis(
     ev.scores["website_understanding"] = brand_score
 
     # -------------------------------------------------------------------------
-    # Dimension B: Evidence Grounding & Provenance (0.0 to 1.0)
+    # Dimension B: Evidence Grounding & Provenance (0.0 to 1.0 or None)
     # -------------------------------------------------------------------------
     services = analysis.get("top_services", [])
     verified_services = [s for s in services if s.get("source") == "website"]
     inferred_services = [s for s in services if s.get("source") == "inferred"]
-
-    valid_evidence_quotes = 0
-    total_evidence_quotes = 0
-    for s in verified_services:
-        evidence_list = s.get("evidence", [])
-        for item in evidence_list:
-            total_evidence_quotes += 1
-            quote = item.get("quote", "")
-            source_url = item.get("source_url", "")
-            if quote and source_url:
-                if pages:
-                    matching_pages = [p for p in pages if source_url.rstrip("/").lower() in p.url.rstrip("/").lower()]
-                    if matching_pages:
-                        page_text = " ".join(matching_pages[0].blocks + [matching_pages[0].title or ""])
-                        if normalize_text_for_matching(quote) in normalize_text_for_matching(page_text):
-                            valid_evidence_quotes += 1
-                else:
-                    if len(quote) >= 5 and source_url.startswith("http"):
-                        valid_evidence_quotes += 1
-
-    grounding_ratio = (valid_evidence_quotes / total_evidence_quotes) if total_evidence_quotes > 0 else (1.0 if not verified_services else 0.0)
     ev.checks["services_provenance_labeled"] = all(s.get("source") in ("website", "inferred") for s in services)
-    ev.checks["evidence_quotes_grounded"] = grounding_ratio >= 0.8
-    ev.scores["grounding_accuracy"] = (grounding_ratio + (1.0 if ev.checks["services_provenance_labeled"] else 0.0)) / 2.0
+
+    if pages is None:
+        # If raw fetched pages are unavailable, grounding cannot be verified.
+        # Mark as unavailable (None / N/A) rather than awarding an unearned score.
+        ev.checks["evidence_quotes_grounded"] = False
+        ev.scores["grounding_accuracy"] = None
+        ev.details["grounding_status"] = "unverified_pages_unavailable"
+    else:
+        valid_evidence_quotes = 0
+        total_evidence_quotes = 0
+        for s in verified_services:
+            evidence_list = s.get("evidence", []) if isinstance(s, dict) else getattr(s, "evidence", [])
+            for item in evidence_list:
+                total_evidence_quotes += 1
+                quote = item.get("quote", "") if isinstance(item, dict) else getattr(item, "quote", "")
+                source_url = item.get("source_url", "") if isinstance(item, dict) else getattr(item, "source_url", "")
+                if quote and source_url:
+                    # Match source URL using collision-safe canonical URL and redirect-alias logic
+                    matching_page = find_matching_page(source_url, pages)
+                    if matching_page:
+                        corpus = page_search_corpus(matching_page)
+                        norm_quote = normalize_text_for_matching(quote)
+                        if norm_quote and norm_quote in normalize_text_for_matching(corpus):
+                            valid_evidence_quotes += 1
+
+        grounding_ratio = (valid_evidence_quotes / total_evidence_quotes) if total_evidence_quotes > 0 else (1.0 if not verified_services else 0.0)
+        ev.checks["evidence_quotes_grounded"] = (grounding_ratio >= 0.8) and (total_evidence_quotes > 0 or not verified_services)
+        provenance_score = 1.0 if ev.checks["services_provenance_labeled"] else 0.0
+        ev.scores["grounding_accuracy"] = (grounding_ratio + provenance_score) / 2.0
+        ev.details["grounding_status"] = "verified"
+        ev.details["valid_evidence_quotes"] = valid_evidence_quotes
+        ev.details["total_evidence_quotes"] = total_evidence_quotes
 
     # -------------------------------------------------------------------------
     # Dimension C: Competitor Intelligence & Comparison Consistency (0.0 to 1.0)
@@ -244,9 +310,9 @@ def evaluate_analysis(
     ev.checks["comparison_eligibility_enforced"] = comparison_compliant
     ev.checks["your_brand_comparison_retained"] = your_brand_present or len(comparison) == 0
 
-    # Check against known invalid competitors in ground truth
-    if expected_facts:
-        invalid_list = [inv.lower() for inv in expected_facts.get("known_invalid_competitors", [])]
+    # Ground truth invalid competitor check (evaluated field)
+    if expected_facts and "known_invalid_competitors" in expected_facts:
+        invalid_list = [inv.lower() for inv in expected_facts["known_invalid_competitors"]]
         found_invalid = any(any(inv in c.get("name", "").lower() for inv in invalid_list) for c in competitors)
         ev.ground_truth_matched["no_disqualified_competitors"] = not found_invalid
     else:
@@ -310,7 +376,7 @@ def evaluate_analysis(
     if len(competitors) == 0:
         ev.needs_manual_review.append("Zero competitors returned; verify if market has identifiable online competitors.")
 
-    ev.details = {
+    ev.details.update({
         "services_count": len(services),
         "verified_services": len(verified_services),
         "inferred_services": len(inferred_services),
@@ -319,9 +385,16 @@ def evaluate_analysis(
         "platforms_covered": sorted(list(covered_platforms)),
         "llm_timings_ms": meta.get("timings_ms", {}),
         "estimated_cost_usd": meta.get("estimated_cost_usd", 0.0),
-    }
+    })
 
     return ev
+
+
+def _fmt(val: Optional[float]) -> str:
+    """Format score or return N/A."""
+    if val is None:
+        return "N/A"
+    return f"{val:.0%}"
 
 
 def format_operational_table(op: OperationalMetrics) -> str:
@@ -338,22 +411,23 @@ def format_quality_summary(results: List[EvaluationResult], all_categories: List
     """Render markdown summary of quality scores, reporting N/A for categories without successful runs."""
     results_by_cat = {r.category: r for r in results}
     lines = [
-        "| Category | Target URL | Successful Runs (n) | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Quality Score | Needs Manual Review |",
+        "| Category | Target URL | Successful Runs (n) | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Structural Score | Needs Manual Review |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|",
     ]
     for cat in all_categories:
         if cat in results_by_cat:
             r = results_by_cat[cat]
             review_flag = f"{len(r.needs_manual_review)} item(s)" if r.needs_manual_review else "None"
+            score_str = f"**{r.structural_score:.0%}**" if r.structural_score is not None else "**N/A**"
             lines.append(
                 f"| **{r.category}** | `{r.url[:35]}` | {r.sample_size} | "
-                f"{r.scores.get('website_understanding', 0):.0%} | "
-                f"{r.scores.get('grounding_accuracy', 0):.0%} | "
-                f"{r.scores.get('competitor_intelligence', 0):.0%} | "
-                f"{r.scores.get('search_query_quality', 0):.0%} | "
-                f"{r.scores.get('seo_quality', 0):.0%} | "
-                f"{r.scores.get('services_and_audience', 0):.0%} | "
-                f"**{r.quality_score:.0%}** | {review_flag} |"
+                f"{_fmt(r.scores.get('website_understanding'))} | "
+                f"{_fmt(r.scores.get('grounding_accuracy'))} | "
+                f"{_fmt(r.scores.get('competitor_intelligence'))} | "
+                f"{_fmt(r.scores.get('search_query_quality'))} | "
+                f"{_fmt(r.scores.get('seo_quality'))} | "
+                f"{_fmt(r.scores.get('services_and_audience'))} | "
+                f"{score_str} | {review_flag} |"
             )
         else:
             lines.append(
@@ -363,21 +437,26 @@ def format_quality_summary(results: List[EvaluationResult], all_categories: List
 
 
 def format_fixture_consistency_summary(results: List[EvaluationResult]) -> str:
-    """Render summary table for offline fixture consistency validation."""
+    """Render summary table for offline fixture consistency validation.
+
+    Note: Grounding reports N/A because raw crawled page bodies are not bundled inside fixture JSON.
+    """
     lines = [
-        "| Category | Fixture URL | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Fixture Consistency Score |",
+        "| Category | Fixture URL | Understanding | Grounding | Competitors | Search Queries | SEO | Services & Audience | Structural Score (5 Dim) |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in results:
+        grounding_str = _fmt(r.scores.get('grounding_accuracy'))
+        score_str = f"**{r.structural_score:.0%}**" if r.structural_score is not None else "**N/A**"
         lines.append(
             f"| **{r.category}** | `{r.url[:35]}` | "
-            f"{r.scores.get('website_understanding', 0):.0%} | "
-            f"{r.scores.get('grounding_accuracy', 0):.0%} | "
-            f"{r.scores.get('competitor_intelligence', 0):.0%} | "
-            f"{r.scores.get('search_query_quality', 0):.0%} | "
-            f"{r.scores.get('seo_quality', 0):.0%} | "
-            f"{r.scores.get('services_and_audience', 0):.0%} | "
-            f"**{r.fixture_consistency_score:.0%}** |"
+            f"{_fmt(r.scores.get('website_understanding'))} | "
+            f"{grounding_str} | "
+            f"{_fmt(r.scores.get('competitor_intelligence'))} | "
+            f"{_fmt(r.scores.get('search_query_quality'))} | "
+            f"{_fmt(r.scores.get('seo_quality'))} | "
+            f"{_fmt(r.scores.get('services_and_audience'))} | "
+            f"{score_str} |"
         )
     return "\n".join(lines)
 
