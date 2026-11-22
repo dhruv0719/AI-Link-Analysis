@@ -3,9 +3,14 @@
 This document compares the supported LLM providers for the **AI Website Link Analysis API**.
 
 > [!IMPORTANT]
-> **CRITICAL METHODOLOGY DISTINCTION:**
-> - **Measured Metrics:** Obtained directly on our active testbed using **Groq (`openai/gpt-oss-120b`)** with real network requests, actual token usage, and live timing logs. **Groq is the only currently tested provider on our live testbed.**
-> - **Published Specifications:** Sourced directly from vendor official documentation and published pricing pages (OpenAI, Anthropic, Google Gemini) as of November 2026. These models have not been evaluated in live end-to-end runs in this testbed.
+> **CRITICAL METHODOLOGY & RETRIEVAL DATE NOTICE (November 2026):**
+> - **Measured Metrics:** Obtained directly on our active testbed using **Groq (`openai/gpt-oss-120b`)** with real network requests, actual token usage, and live timing logs. **Groq is the ONLY provider tested on our live testbed.**
+> - **Published Specifications (Untested on Testbed):** Specifications for OpenAI (`gpt-6-luna`), Anthropic (`claude-haiku-5-5`), and Google Gemini (`gemini-3.5-flash-lite`) are sourced directly from vendor official documentation and published pricing pages as of **November 2026**. These three models have **NOT** been evaluated in live end-to-end runs in this testbed, and their runtime latency is strictly marked as **Untested / Not measured**.
+> - **Official Vendor Documentation & Pricing References (Retrieved November 2026):**
+>   - **Groq:** Models: [https://console.groq.com/docs/models](https://console.groq.com/docs/models) | Pricing: [https://groq.com/pricing/](https://groq.com/pricing/)
+>   - **OpenAI:** Models: [https://platform.openai.com/docs/models](https://platform.openai.com/docs/models) | Pricing: [https://openai.com/api/pricing/](https://openai.com/api/pricing/)
+>   - **Anthropic:** Models: [https://docs.anthropic.com/en/docs/about-claude/models](https://docs.anthropic.com/en/docs/about-claude/models) | Pricing: [https://www.anthropic.com/pricing](https://www.anthropic.com/pricing)
+>   - **Google Gemini:** Models: [https://ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) | Pricing: [https://ai.google.dev/pricing](https://ai.google.dev/pricing)
 
 ---
 
@@ -14,16 +19,17 @@ This document compares the supported LLM providers for the **AI Website Link Ana
 | Provider | Model ID | Evaluation Status | Input Price / 1M | Output Price / 1M | Cache Read / 1M | Est. Cost / Analysis (~4.5k in / 2.5k out) | Latency | Context Window | Structured Output Mechanism |
 |---|---|---|---:|---:|---:|---:|---|---|---|
 | **Groq** | `openai/gpt-oss-120b` | **Measured (Live Testbed)** | $0.15 | $0.60 | $0.075 | **$0.0020 – $0.0024** | **8.9s – 10.5s (Measured)** | 128k tokens | JSON Mode + Pydantic Schema |
-| **OpenAI** | `gpt-6-luna` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00170 (Published Spec) | 6.0s – 9.0s (Vendor Spec) | 128k tokens | Native Strict `json_schema` |
-| **Anthropic** | `claude-haiku-5-5` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00170 (Published Spec) | 5.0s – 8.0s (Vendor Spec) | 200k tokens | Forced Tool Calling Schema |
-| **Google Gemini** | `gemini-3.5-flash-lite` | Published Specification | $0.30 | $2.50 | $0.030 | ~$0.00760 (Published Spec) | 4.0s – 7.0s (Vendor Spec) | 1M tokens | Native `response_schema` |
+| **OpenAI** | `gpt-6-luna` | Untested on Testbed (Published Spec) | $0.10 | $0.50 | $0.010 | ~$0.00170 (Published Spec) | **Untested / Not measured** | 128k tokens | Native Strict `json_schema` |
+| **Anthropic** | `claude-haiku-5-5` | Untested on Testbed (Published Spec) | $0.10 | $0.50 | $0.010 | ~$0.00170 (Published Spec) | **Untested / Not measured** | 200k tokens | Forced Tool Calling Schema |
+| **Google Gemini** | `gemini-3.5-flash-lite` | Untested on Testbed (Published Spec) | $0.30 | $2.50 | $0.030 | ~$0.00760 (Published Spec) | **Untested / Not measured** | 1M tokens | Native `response_schema` |
 
 ---
 
 ## 2. Detailed Provider Analysis
 
 ### A. Groq — `openai/gpt-oss-120b` (MEASURED ON LIVE TESTBED)
-- **Deployment Status:** Active primary inference engine in the benchmark environment.
+- **Deployment Status:** Active primary inference engine in the benchmark environment. **Groq is the ONLY live-tested provider.**
+- **Official Documentation:** [https://console.groq.com/docs/models](https://console.groq.com/docs/models) | [https://groq.com/pricing/](https://groq.com/pricing/)
 - **Measured Performance (Live Invocations):**
   - Average LLM inference time: **8.98s** (Plausible) to **9.12s** (Jay Jagle Innovations).
   - Typical token consumption: ~4,000–4,800 prompt tokens, ~2,400–2,800 completion tokens.
@@ -44,8 +50,10 @@ This document compares the supported LLM providers for the **AI Website Link Ana
 
 ---
 
-### B. OpenAI — `gpt-6-luna` (PUBLISHED SPECIFICATION — NOT LIVE TESTED)
-- **Deployment Status:** Supported via HTTPX adapter; not tested on live testbed.
+### B. OpenAI — `gpt-6-luna` (UNTESTED ON TESTBED — PUBLISHED SPECIFICATION)
+- **Deployment Status:** Supported via HTTPX adapter; **NOT tested on live testbed**.
+- **Official Documentation (Retrieved November 2026):** [https://platform.openai.com/docs/models](https://platform.openai.com/docs/models) | [https://openai.com/api/pricing/](https://openai.com/api/pricing/)
+- **Latency on Testbed:** **Untested / Not measured**.
 - **Published Pricing:** $0.10 / 1M input tokens, $0.50 / 1M output tokens, $0.01 / 1M cached input tokens.
 - **Theoretical Cost per Analysis:** ~$0.00170 USD.
 - **Documented Vendor Capabilities:**
@@ -57,8 +65,10 @@ This document compares the supported LLM providers for the **AI Website Link Ana
 
 ---
 
-### C. Anthropic — `claude-haiku-5-5` (PUBLISHED SPECIFICATION — NOT LIVE TESTED)
-- **Deployment Status:** Supported via HTTPX adapter; not tested on live testbed.
+### C. Anthropic — `claude-haiku-5-5` (UNTESTED ON TESTBED — PUBLISHED SPECIFICATION)
+- **Deployment Status:** Supported via HTTPX adapter; **NOT tested on live testbed**.
+- **Official Documentation (Retrieved November 2026):** [https://docs.anthropic.com/en/docs/about-claude/models](https://docs.anthropic.com/en/docs/about-claude/models) | [https://www.anthropic.com/pricing](https://www.anthropic.com/pricing)
+- **Latency on Testbed:** **Untested / Not measured**.
 - **Published Pricing:** $0.10 / 1M input tokens, $0.50 / 1M output tokens (for prompts <= 100k tokens), $0.01 / 1M cache read.
 - **Theoretical Cost per Analysis:** ~$0.00170 USD.
 - **Documented Vendor Capabilities:**
@@ -70,8 +80,10 @@ This document compares the supported LLM providers for the **AI Website Link Ana
 
 ---
 
-### D. Google Gemini — `gemini-3.5-flash-lite` (PUBLISHED SPECIFICATION — NOT LIVE TESTED)
-- **Deployment Status:** Supported via HTTPX adapter; not tested on live testbed.
+### D. Google Gemini — `gemini-3.5-flash-lite` (UNTESTED ON TESTBED — PUBLISHED SPECIFICATION)
+- **Deployment Status:** Supported via HTTPX adapter; **NOT tested on live testbed**.
+- **Official Documentation (Retrieved November 2026):** [https://ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) | [https://ai.google.dev/pricing](https://ai.google.dev/pricing)
+- **Latency on Testbed:** **Untested / Not measured**.
 - **Published Pricing:** $0.30 / 1M input tokens, $2.50 / 1M output tokens, $0.03 / 1M cached input tokens. Free tier available with rate limits.
 - **Theoretical Cost per Analysis:** ~$0.00760 USD.
 - **Documented Vendor Capabilities:**
@@ -92,4 +104,8 @@ LLM_FALLBACK_PROVIDER=openai
 LLM_FALLBACK_MODEL=gpt-6-luna
 ```
 
-If the primary provider encounters HTTP 429 (rate limits), HTTP 5xx (upstream outage), or invalid JSON after repair, the system transparently escalates to the fallback provider.
+> [!WARNING]
+> **FALLBACK LIVE TESTING STATUS:**
+> Multi-provider fallback is fully designed and configured in the application architecture (`app/config.py` and `app/services/llm_service.py`), but has **NOT been end-to-end verified in live testing** because alternate vendor API keys were not provisioned during this benchmark run. In the live testbed, all requests were executed strictly against Groq (`openai/gpt-oss-120b`).
+
+If the primary provider encounters HTTP 429 (rate limits), HTTP 5xx (upstream outage), or invalid JSON after repair, the system transparently escalates to the fallback provider when configured with valid credentials.
