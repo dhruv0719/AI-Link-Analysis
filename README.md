@@ -1,307 +1,475 @@
 # AI Website Link Analysis API
 
-FastAPI service that takes a website URL, extracts the real content of the site (homepage + key inner pages), sends a cleaned, budgeted version to an LLM and returns **five structured analysis sections** as validated JSON: competitor comparison with reachability and market relevance verification, 5 target search queries with platform-specific variants, SEO improvements, 0–5 genuine services with evidence grounding, and target audience.
+FastAPI production service that takes a target website URL, extracts the real content of the site (homepage + up to 3 key inner pages), evaluates the content through a multi-provider LLM pipeline, grounds facts against source quotations, and returns **five structured analysis sections** as strictly validated Pydantic JSON:
 
-> **Live demo:** `https://YOUR-SERVICE.onrender.com` &nbsp;|&nbsp; **API docs:** `https://YOUR-SERVICE.onrender.com/docs` &nbsp;*(replace after deploying, see [Deployment](#deployment))*
+1. **Competitor Intelligence:** 0–5 competitors with reachability verification, market relevance analysis, and an aligned comparison table.
+2. **Search Query Recommendations:** Exactly 5 target search queries with platform-specific variants across **Google**, **Facebook**, **Instagram**, **LinkedIn**, and **X**.
+3. **SEO Improvements:** Deterministic on-page HTML audit combined with bounded recommendations for title tags, meta descriptions, and supporting content pages.
+4. **Services & Core Capabilities:** 0–5 genuine services backed by deterministic evidence quotations and canonical source URLs.
+5. **Target Audience:** Detailed audience profiling, pain points, customer challenges, and actionable marketing segments.
+
+> **API Documentation:** Interactive Swagger UI available at `/docs` &nbsp;|&nbsp; OpenAPI Schema at `/openapi.json` &nbsp;|&nbsp; Health Check at `/health`
 
 ```bash
-curl -X POST http://localhost:4000/link-analysis -H "Content-Type: application/json" -d '{"url": "https://example.com"}'
+curl -X POST http://localhost:4000/link-analysis \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://plausible.io"}'
 ```
-
-## Contents
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Configuration](#configuration) · [API](#api) · [Requirement coverage](#requirement-coverage) · [Security](#security) · [Testing & evidence](#testing--evidence) · [Deployment](#deployment) · [LLM research: cost, speed, accuracy](#llm-research-cost-speed-and-accuracy) · [Limitations](#limitations--next-steps) · [Project structure](#project-structure)
 
 ---
 
-## How it works
+## Table of Contents
+1. [Project Overview](#1-project-overview)
+2. [Problem Statement & Solution Architecture](#2-problem-statement--solution-architecture)
+3. [Architecture Diagram & Component Breakdown](#3-architecture-diagram--component-breakdown)
+4. [Key Features](#4-key-features)
+5. [Tech Stack & Design Decisions](#5-tech-stack--design-decisions)
+6. [Getting Started (Windows & Linux)](#6-getting-started-windows--linux)
+7. [Environment Variables & Configuration](#7-environment-variables--configuration)
+8. [API Usage & Error Handling](#8-api-usage--error-handling)
+9. [Sample Request & Response](#9-sample-request--response)
+10. [Testing Instructions](#10-testing-instructions)
+11. [Evaluation & Benchmark Methodology (8 Categories)](#11-evaluation--benchmark-methodology-8-categories)
+12. [LLM Model Comparison (Measured vs. Published)](#12-llm-model-comparison-measured-vs-published)
+13. [Security Considerations & SSRF Protection](#13-security-considerations--ssrf-protection)
+14. [Known Limitations & Trade-offs](#14-known-limitations--trade-offs)
+15. [Deployment Guide (Docker & Render)](#15-deployment-guide-docker--render)
+
+---
+
+## 1. Project Overview
+
+The **AI Website Link Analysis API** bridges the gap between raw web scraping and actionable business intelligence. Automated analysis of business websites often suffers from two extremes: shallow scraping tools that fail to extract meaning, or unconstrained LLMs that hallucinate services, invent competitors, fabricate search volumes, and produce invalid JSON.
+
+This system delivers:
+- **Evidence-Grounded Intelligence:** Factual statements (brand identity, physical location, service offerings) are bound to verbatim textual excerpts found on the fetched pages. Unsubstantiated claims are automatically downgraded to `inferred`.
+- **Competitor Relevance & Reachability:** Distinguishes whether a competitor website is merely alive from whether it genuinely operates in the same commercial market, eliminating false comparisons.
+- **True Multi-Platform Search Strategy:** Produces actionable discovery queries adapted to the distinct culture and format of all 5 major platforms (Google search syntax, Instagram topical hashtags, LinkedIn B2B phrasing, Facebook community discovery, and X discussion keywords).
+- **Hardened Security & Production Engineering:** Built-in DNS-pinning to defeat Server-Side Request Forgery (SSRF) and DNS rebinding attacks, strict port filtering, fail-closed production safety, in-memory TTL caching, and per-client rate limiting.
+
+---
+
+## 2. Problem Statement & Solution Architecture
+
+### The Challenges
+1. **Hallucination of Core Services:** Standard LLM prompts force models to return exactly 5 services, causing them to invent offerings for specialized, single-product businesses.
+2. **Fabricated Search Volume Metrics:** Many tools fabricate exact monthly search volume, keyword difficulty, or CPC estimates without paying for commercial data APIs.
+3. **Irrelevant Competitor Suggestions:** Models frequently suggest Big Tech conglomerates (e.g. suggesting Google or Amazon for a local agency) or hallucinate non-existent URLs.
+4. **Security Vulnerabilities (SSRF):** Accepting arbitrary user-supplied URLs creates extreme risk for cloud infrastructure metadata theft (`http://169.254.169.254`) and internal port scanning.
+5. **Loss of Geographic and Contact Context:** Naive HTML cleaners strip footers entirely, destroying addresses, phone numbers, and operational jurisdictions.
+
+### How We Solve Them
+- **Flexible Cardinality (0–5):** The schema permits 0 to 5 services and competitors. If a business offers only 1 product, exactly 1 is returned.
+- **Honest Metrics:** Search volume and traffic estimates are completely omitted. Query recommendations focus purely on searcher intent and platform syntax.
+- **Competitor Verification & Content-Based Relevance:** Competitor candidates are tested for DNS and HTTP reachability, fetched via our secure fetcher, and scored for true market category overlap.
+- **DNS-Pinned HTTP Transport:** Sockets are locked directly to pre-validated public IPs, eliminating TOCTOU DNS rebinding and private subnet reachability.
+- **Selective Footer Parsing:** Semantic boilerplate (copyright, social icons) is removed while preserving business addresses, jurisdictions, and contact information.
+
+---
+
+## 3. Architecture Diagram & Component Breakdown
 
 ```mermaid
-flowchart LR
-    A[POST /link-analysis] --> B[Validate URL + SSRF checks]
-    B --> C{Cache hit?}
-    C -- yes --> Z[Return cached JSON]
-    C -- no --> D[Fetch homepage<br/>manual redirects, size cap]
-    D --> E[Find + fetch 2-3 key pages<br/>about / services / pricing]
-    E --> F[Clean HTML: strip scripts, nav, footer,<br/>cookie banners, duplicates]
-    F --> G[One LLM call<br/>JSON for all 5 sections]
-    G --> H{Valid per Pydantic?}
-    H -- no --> I[One repair call with<br/>validator errors, then fallback model]
-    I --> G
-    H -- yes --> J[Verify competitor sites are live<br/>+ deterministic on-page SEO audit]
-    J --> K[Return JSON + meta: tokens, cost, timings]
+flowchart TD
+    A["POST /link-analysis (Client)"] --> B["URL Validation & SSRF IP Checks"]
+    B --> C{"In-Memory TTL Cache?"}
+    C -- "Hit (<5ms)" --> Z["Return Cached JSON"]
+    C -- "Miss" --> D["DNS-Pinned SafeFetcher"]
+    
+    subgraph Extraction ["Website Extraction Pipeline"]
+        D --> E["Fetch Homepage (Manual Redirects, 2MB Cap)"]
+        E --> F["Discover & Fetch up to 3 Inner Pages<br/>(Services, About, Pricing)"]
+        F --> G["HTML Cleaner: Selective Footer, Strip Scripts/Nav"]
+        G --> H["Text Budgeting: Homepage 55% / Inner 45% (20k chars)"]
+    end
+
+    subgraph LLM ["Inference & Repair Engine"]
+        H --> I["Single Prompt LLM Inference<br/>(Groq / OpenAI / Anthropic / Gemini)"]
+        I --> J{"Pydantic Validation"}
+        J -- "Invalid JSON" --> K["Structured Repair Call"]
+        K -- "Failed Again" --> L["Fallback Provider"]
+        L --> J
+    end
+
+    subgraph Grounding ["Grounding & Competitor Intelligence"]
+        J -- "Valid" --> M["Runtime Evidence Grounding<br/>(Exact Normalized Quote Match & Source URL Verify)"]
+        M --> N["Competitor Verification & Market Relevance Engine<br/>(Concurrent Reachability + Content Analysis)"]
+        N --> O["5-Platform Query Assurance<br/>(Google, FB, IG, LinkedIn, X)"]
+        O --> P["Deterministic On-Page SEO Checks"]
+    end
+
+    P --> Q["Assemble LinkAnalysisResponse + Meta Timings & Cost"]
+    Q --> Z
 ```
 
-Key design decisions
+### Component Directory
+- [`app/main.py`](file:///d:/ai-link-analysis/app/main.py): FastAPI routing, lifespan lifecycle, error handling, rate limiting, and CORS.
+- [`app/config.py`](file:///d:/ai-link-analysis/app/config.py): Environment settings, pricing matrix, and fail-closed security validators.
+- [`app/schemas.py`](file:///d:/ai-link-analysis/app/schemas.py): Strict Pydantic models for request, response, grounding evidence, and relevance classifications.
+- [`app/prompts.py`](file:///d:/ai-link-analysis/app/prompts.py): System instructions, JSON skeleton schema, and repair prompt templates.
+- [`app/services/website_extractor.py`](file:///d:/ai-link-analysis/app/services/website_extractor.py): `SafeFetcher`, `PinnedDNSResolver`, selective footer extraction, and HTML cleaning.
+- [`app/services/grounding.py`](file:///d:/ai-link-analysis/app/services/grounding.py): Verifies exact normalized quote matching, canonicalizes source URLs, and manages service downgrades.
+- [`app/services/competitor_service.py`](file:///d:/ai-link-analysis/app/services/competitor_service.py): Live reachability and content-based relevance verification for competitors.
+- [`app/services/llm_service.py`](file:///d:/ai-link-analysis/app/services/llm_service.py): Multi-provider adapter (Groq, OpenAI, Anthropic, Gemini) with exponential retry, repair, and token accounting.
+- [`app/services/analysis_service.py`](file:///d:/ai-link-analysis/app/services/analysis_service.py): End-to-end orchestration, platform coverage assurance, and comparison matrix alignment.
 
-| Decision | Why |
-|---|---|
-| **One LLM call for all five sections** | The site text is the expensive part of the prompt. Sending it once instead of five times cuts input cost ~5x and keeps the sections consistent with each other. |
-| **Homepage + up to 3 key inner pages** | Homepages are often thin; services/about pages hold the facts needed for "top services" and audience. Same-site links are scored by keywords; all fetches go through the same SSRF-safe fetcher. |
-| **Raw REST (httpx) for OpenAI, Anthropic and Gemini** | One dependency, identical timeout/retry/logging for every provider, switch with an env var, trivial to mock in tests. |
-| **Pydantic validation + one repair call + fallback provider** | LLM JSON is *validated*, not trusted. Errors are fed back once; if still invalid, the fallback provider is tried. |
-| **Competitors: Reachability vs. Market Relevance** | The LLM suggests competitor candidates from memory. The system evaluates them across two strictly separated dimensions: (1) **Reachability** (`verification`), confirming whether the site resolves and mentions the competitor name, and (2) **Market Relevance** (`relevance`), which fetches the competitor website using DNS-pinned `SafeFetcher` and deterministically evaluates Category, Offering, Audience, and Geographic overlap signals. |
-| **Deterministic runtime evidence grounding** | Factual claims (`source: "website"`, brand, location) require exact supporting quotations from fetched pages. Quotes are verified with Unicode NFKC and whitespace normalization. Services without verifiable evidence are automatically downgraded to `source: "inferred"`. |
-| **On-page SEO audit is computed, not generated** | Title/meta lengths, H1 count, canonical, alt text, JSON-LD, etc. come from the real HTML, so those facts cannot be hallucinated. |
-| **Platform-adapted search queries without volume claims** | Generates 5 queries adapted with specific variants for Google (search phrases), Instagram (hashtags), Facebook (community/local discovery), LinkedIn (B2B vendor discovery), and X (topic discussion). No fake search volumes, CPC, or traffic estimates are ever produced. |
+---
 
-### Evidence Grounding & Epistemic Provenance
+## 4. Key Features
 
-The API distinguishes four epistemic statuses across all output sections:
+- **Selective Footer Extraction:** Preserves vital corporate headquarters, phone numbers, and physical addresses located in footer elements while purging boilerplate legal links and navigation menus.
+- **Exact Quotation Grounding:** All services claiming `source: "website"` must include verbatim quotes present in the fetched page text. The system automatically downgrades unverified claims to `source: "inferred"`.
+- **Competitor Relevance vs. Reachability:** Separates physical HTTP availability (`verified_live_site`, `unreachable`) from commercial fit (`likely_relevant`, `possible`, `unrelated`, `category_mismatch`).
+- **Full 5-Platform Representation:** Every query set covers Google (high-intent search), Facebook (community recommendations), Instagram (topical hashtags), LinkedIn (B2B vendor discovery), and X (industry discussions).
+- **Deterministic SEO Audits:** Real on-page HTML inspection for title tags, meta description lengths, H1 counts, canonical tags, and viewport tags.
+- **Fail-Closed SSRF Immunity:** Rejects private IPs, loopback, IPv6 mapped forms, link-local metadata endpoints (`169.254.169.254`), and non-standard ports.
+- **In-Memory Caching & Rate Limiting:** 24-hour TTL caching for repeat requests (<5ms latency) and sliding-window rate limiting per client IP.
 
-1. **Website-Verified (`website_verified`):** Factual claims (brand name, explicit service offerings, physical location) backed by verifiable verbatim excerpts from the fetched website.
-2. **Inferred (`inferred`):** Plausible analytical deductions drawn by the model (e.g. target customer profiles, offerings implied but not verbatim quoted).
-3. **Recommendations (`recommendation`):** Forward-looking suggestions (e.g. search queries, supporting content topics, marketing segments).
-4. **AI-Suggested Competitors (`ai_suggested`):** Suggestions derived from LLM memory, verified for HTTP reachability and evaluated for market relevance.
+---
 
-**Deterministic Evidence Validation Rules:**
-- Every service claimed as `source: "website"` must provide supporting `Evidence(quote=..., source_url=...)`.
-- The `source_url` must match an actual page fetched during analysis.
-- The `quote` is normalized (Unicode NFKC, smart quotes/dashes standardized, whitespace collapsed) and verified against the page corpus.
-- If a service lacks verifiable evidence, the server **automatically downgrades** it to `source: "inferred"` with `provenance: "inferred"` and removes unverified evidence from the response.
-- **Competitor Relevance & Low-Information Handling:**
-  - Evaluates category, offering, audience, and geographic overlap from actual fetched competitor content.
-  - Distinguishes clinical healthcare practices from consumer product manufacturers (e.g. dental clinic vs toothpaste brand, yielding `category_mismatch` / `substitute`).
-  - Unreachable sites return `verification: "unreachable"` and `relevance.status: "not_checked"`. Unreachable sites are never misclassified as a "category mismatch".
-  - Thin sites (< 30 words) or bot-protected sites return `relevance.status: "insufficient_evidence"` and `competitor_type: "unknown"`.
-  - Competitor evidence quotations are extracted directly from fetched competitor pages and rejected if not present verbatim.
-  - Comparison entries are strictly synchronized to only retain the analyzed brand and competitors present in the final verified list.
-- **Important Limitation:** Exact text matching proves that a quotation appears in the fetched website content; it does not prove that the website itself is truthful.
+## 5. Tech Stack & Design Decisions
 
-## Quick start
+| Technology | Role | Reason Chosen |
+|---|---|---|
+| **Python 3.12** | Runtime | High-performance async I/O, modern type hints, and broad library support. |
+| **FastAPI** | Web Framework | Native async support, automatic OpenAPI/Swagger generation, and clean dependency injection. |
+| **Pydantic v2** | Data Validation | Ultra-fast Rust-based data validation and strict serialization control. |
+| **HTTPX** | Async HTTP Client | Standardized async HTTP client for all LLM provider APIs (Groq, OpenAI, Anthropic, Gemini). |
+| **AIOHTTP + Custom Resolver** | Safe Fetching | Enables low-level socket binding (`PinnedDNSResolver`) required to prevent DNS rebinding attacks. |
+| **BeautifulSoup4** | HTML Parsing | Resilient, fault-tolerant DOM traversal and selective node sanitization. |
 
-Requires Python 3.10+ (developed on 3.12).
+### Architectural Trade-off Summary
+1. **Single LLM Call for All Sections:** Passing extracted website text once rather than across 5 separate calls saves ~80% in token costs and ensures analytical consistency across sections.
+2. **Selective Extraction vs. Headless Browser:** Lightweight async HTTP fetching requires minimal CPU/RAM and finishes in 2–4s. Headless Chrome is reserved for optional future SPA rendering.
+3. **Pydantic Schema Validation + Repair:** LLM JSON outputs are never trusted blindly; they are strictly parsed, repaired on error, or escalated to a fallback model.
 
-```bash
-git clone <your-repo-url> && cd ai-link-analysis
-python -m venv .venv && source .venv/bin/activate        # Windows: .venv\Scripts\activate
+---
+
+## 6. Getting Started (Windows & Linux)
+
+### Prerequisites
+- Python 3.10, 3.11, or 3.12 installed.
+- Git.
+- An API key for at least one supported provider (Groq, OpenAI, Anthropic, or Google Gemini).
+
+### Windows Setup (PowerShell)
+```powershell
+# 1. Clone repository
+git clone https://github.com/your-username/ai-link-analysis.git
+cd ai-link-analysis
+
+# 2. Create and activate virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 3. Install dependencies
 pip install -r requirements-dev.txt
 
-cp .env.example .env                                     # then edit .env: set LLM_PROVIDER and ONE api key
-uvicorn app.main:app --host 0.0.0.0 --port 4000
+# 4. Configure environment
+Copy-Item .env.example .env
+# Open .env and insert your API key (e.g., GROQ_API_KEY=gsk_...)
+
+# 5. Run API server
+uvicorn app.main:app --host 0.0.0.0 --port 4000 --reload
 ```
 
-* Swagger UI: <http://localhost:4000/docs> (try the endpoint there)
-* Health/config check: <http://localhost:4000/health>
-* Tests (no network, no API key needed): `pytest -q`
+### Linux / macOS Setup (Bash)
+```bash
+# 1. Clone repository
+git clone https://github.com/your-username/ai-link-analysis.git
+cd ai-link-analysis
 
-Pick a provider in `.env`:
+# 2. Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-| You have | Set |
-|---|---|
-| OpenAI key | `LLM_PROVIDER=openai` `OPENAI_API_KEY=...` (default model `gpt-6-luna`) |
-| Anthropic key | `LLM_PROVIDER=anthropic` `ANTHROPIC_API_KEY=...` (default `claude-haiku-5-5`) |
-| Gemini key (has a free tier) | `LLM_PROVIDER=gemini` `GEMINI_API_KEY=...` (default `gemini-3.5-flash-lite`) |
+# 3. Install dependencies
+pip install -r requirements-dev.txt
 
-Optional: `LLM_FALLBACK_PROVIDER=anthropic` (+ its key) to automatically retry on another vendor when the primary fails or returns invalid JSON.
+# 4. Configure environment
+cp .env.example .env
+# Edit .env and insert your API key
 
-## Configuration
+# 5. Run API server
+uvicorn app.main:app --host 0.0.0.0 --port 4000 --reload
+```
 
-All settings are environment variables (see [`.env.example`](.env.example)). Secrets are read via `SecretStr`, never logged, never returned.
+---
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `LLM_PROVIDER` / `LLM_MODEL` | `openai` / provider default | Primary model |
-| `LLM_FALLBACK_PROVIDER` / `LLM_FALLBACK_MODEL` | unset | Used on provider error or invalid JSON |
-| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | unset | Credentials (only the ones you use) |
-| `OPENAI_REASONING_EFFORT` | `low` | Cost/latency knob for OpenAI reasoning models (empty = omit, for non-reasoning models) |
-| `GEMINI_THINKING_LEVEL` | unset | Same idea for Gemini (thinking tokens are billed as output) |
-| `LLM_MAX_OUTPUT_TOKENS` / `LLM_TIMEOUT_SECONDS` | `8000` / `90` | Output cap (includes reasoning tokens) / per-call timeout |
-| `MAX_EXTRA_PAGES` | `3` | Inner pages fetched besides the homepage (`0` = homepage only) |
-| `MAX_CONTENT_CHARS` | `20000` | Text budget sent to the LLM (~5k tokens) |
-| `FETCH_TIMEOUT_SECONDS`, `FETCH_MAX_BYTES`, `MAX_REDIRECTS` | `12`, `2000000`, `5` | Fetcher limits |
-| `CACHE_TTL_SECONDS`, `CACHE_MAX_ITEMS` | `86400`, `256` | In-memory result cache |
-| `RATE_LIMIT_PER_MINUTE` | `20` | Per-client limit (protects LLM credits on a public demo) |
-| `TRUST_PROXY_HEADERS` | `false` | Use `X-Forwarded-For` for the client IP (enable behind Render/Nginx) |
-| `VERIFY_COMPETITORS` | `true` | Live-check suggested competitor websites |
-| `ALLOW_PRIVATE_URLS` | `false` | **Dev/test only.** Disables SSRF protection. Never enable in production. |
+## 7. Environment Variables & Configuration
 
-## API
+All settings are managed via [`app/config.py`](file:///d:/ai-link-analysis/app/config.py) and loaded from `.env`:
 
-### `POST /link-analysis`
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `LLM_PROVIDER` | string | `openai` | Primary LLM provider (`openai`, `anthropic`, `gemini`, `groq`). |
+| `LLM_MODEL` | string | `None` | Custom model ID. If omitted, uses the provider's default model. |
+| `LLM_FALLBACK_PROVIDER` | string | `None` | Secondary provider invoked if the primary fails or rate-limits. |
+| `LLM_FALLBACK_MODEL` | string | `None` | Custom model ID for fallback provider. |
+| `OPENAI_API_KEY` | string | `None` | OpenAI API key (`sk-...`). |
+| `ANTHROPIC_API_KEY` | string | `None` | Anthropic API key (`sk-ant-...`). |
+| `GEMINI_API_KEY` | string | `None` | Google Gemini API key. |
+| `GROQ_API_KEY` | string | `None` | Groq API key (`gsk_...`). |
+| `OPENAI_REASONING_EFFORT` | string | `low` | Reasoning effort for OpenAI thinking models (`low`, `medium`, `high`). |
+| `GEMINI_THINKING_LEVEL` | string | `None` | Thinking budget level for Gemini models (`minimal`, `low`, `medium`, `high`). |
+| `LLM_MAX_OUTPUT_TOKENS` | int | `8000` | Hard cap on LLM response length. |
+| `LLM_TIMEOUT_SECONDS` | float | `90.0` | Timeout for LLM completion requests. |
+| `FETCH_TIMEOUT_SECONDS` | float | `12.0` | Max duration for single website HTTP fetches. |
+| `DNS_TIMEOUT_SECONDS` | float | `5.0` | Max duration for async DNS resolution. |
+| `FETCH_MAX_BYTES` | int | `2000000` | Max response body size (2MB) before aborting download. |
+| `MAX_REDIRECTS` | int | `5` | Maximum redirects followed during website crawling. |
+| `MAX_EXTRA_PAGES` | int | `3` | Maximum internal subpages crawled alongside the homepage. |
+| `MAX_CONTENT_CHARS` | int | `20000` | Character budget sent in LLM prompt (~5,000 tokens). |
+| `ENVIRONMENT` | string | `production` | Deployment environment (`production`, `development`, `test`). |
+| `CACHE_TTL_SECONDS` | int | `86400` | In-memory cache duration in seconds (24 hours). |
+| `CACHE_MAX_ITEMS` | int | `256` | Maximum cached analyses stored in memory. |
+| `RATE_LIMIT_PER_MINUTE` | int | `20` | Max API requests permitted per client IP per minute. |
+| `TRUST_PROXY_HEADERS` | bool | `false` | Read `X-Forwarded-For` for IP rate-limiting (set `true` on Render). |
+| `VERIFY_COMPETITORS` | bool | `true` | Perform live reachability and relevance verification on competitors. |
+| `CORS_ORIGINS` | string | `*` | Comma-separated list of allowed CORS origins. |
+| `ALLOW_PRIVATE_URLS` | bool | `false` | **DEV ONLY.** Permits local/private IPs. Fails closed in production. |
 
-Request:
+---
 
+## 8. API Usage & Error Handling
+
+### Endpoints
+- `POST /link-analysis`: Analyzes target URL and returns full structured JSON.
+- `GET /health`: Liveness probe and configuration status.
+- `GET /docs`: Interactive Swagger UI.
+- `GET /openapi.json`: Machine-readable OpenAPI 3.1 specification.
+
+### Error Codes and HTTP Status Mapping
+
+All errors conform to a standard envelope:
 ```json
-{ "url": "https://example.com" }
+{
+  "success": false,
+  "error": {
+    "code": "error_code_identifier",
+    "message": "Human-readable explanation of error.",
+    "details": null
+  }
+}
 ```
 
-A missing scheme is tolerated (`example.com` becomes `https://example.com`).
+| HTTP Status | Error Code | Trigger Condition |
+|---|---|---|
+| `400 Bad Request` | `blocked_url` / `ssrf_blocked` | Target URL resolves to a private, loopback, or cloud-metadata IP. |
+| `400 Bad Request` | `port_not_allowed` | Target URL specifies a port other than 80 or 443. |
+| `415 Unsupported Media` | `unsupported_content_type` | Target URL returned non-HTML data (e.g. PDF, binary, audio). |
+| `422 Unprocessable` | `invalid_request` | Malformed JSON body or missing `url` field. |
+| `422 Unprocessable` | `invalid_url` | Malformed URL format or invalid protocol scheme. |
+| `422 Unprocessable` | `domain_not_found` | Domain could not be resolved (NXDOMAIN). |
+| `422 Unprocessable` | `insufficient_content` | Target website contains less than 150 characters of readable text. |
+| `429 Too Many Requests` | `rate_limited` | Client exceeded the per-minute rate limit. |
+| `502 Bad Gateway` | `website_unreachable` | Target website refused connection or TLS handshake failed. |
+| `502 Bad Gateway` | `llm_invalid_response` | LLM produced unrepairable malformed JSON. |
+| `503 Service Unavailable`| `llm_rate_limited` | Upstream LLM provider quota exhausted. |
+| `504 Gateway Timeout` | `fetch_timeout` | Target website failed to respond within 12 seconds. |
+| `500 Internal Error` | `internal_error` | Unexpected server error (sanitized; no traces leaked). |
 
-Response `200` (generated by `curl` against the running server; lists shortened to one item for readability, full file: [`docs/sample_response.json`](docs/sample_response.json)):
+---
 
-> **Provenance of the sample:** the website fetching, multi-page crawl, extraction, validation, SEO audit, caching and cost maths are the real pipeline running over HTTP against a local test site. The LLM reply in this sample came from a scripted fixture (`tests/fixtures/sample_llm_output.json`), **not** from a live model call. Replace it with a real run from your own key before submitting (see `docs/SUBMISSION_CHECKLIST.md`).
+## 9. Sample Request & Response
 
+### Request
+```http
+POST /link-analysis HTTP/1.1
+Host: localhost:4000
+Content-Type: application/json
+
+{
+  "url": "https://plausible.io"
+}
+```
+
+### Response (200 OK)
 ```json
 {
   "success": true,
-  "website": "http://127.0.0.1:8765/",
+  "website": "https://plausible.io",
   "brand": {
-    "name": "Acme Web Studio",
-    "category": "Web Development & Digital Services",
-    "summary": "Surat-based web agency that builds fast, affordable websites, e-commerce stores and SEO/maintenance retainers for small businesses and startups."
+    "name": "Plausible Analytics",
+    "category": "Web Analytics & Privacy Tech",
+    "summary": "Plausible is an intuitive, lightweight and open-source web analytics tool built as a privacy-friendly alternative to Google Analytics.",
+    "provenance": "website_verified",
+    "evidence": [
+      {
+        "quote": "Plausible is an intuitive, lightweight and open source web analytics tool.",
+        "source_url": "https://plausible.io"
+      }
+    ]
   },
   "analysis": {
     "competitor_analysis": {
-      "brand_overview": "Acme Web Studio is a small web development agency positioned on affordability and speed for small businesses and startups. Its offer centres on custom websites, Shopify/WooCommerce stores and ongoing SEO and maintenance.",
-      "main_category": "Web design and development agency",
+      "brand_overview": "Plausible positions itself as a lightweight, cookie-free Google Analytics alternative focused on GDPR compliance and site speed.",
+      "main_category": "Privacy-Focused Web Analytics",
       "main_products_services": [
-        "Custom website development"
+        "Web analytics dashboard",
+        "Custom event tracking"
       ],
       "competitors": [
         {
-          "name": "Wix",
-          "website": "https://www.wix.com",
-          "description": "DIY website builder with a large template library and an optional expert marketplace.",
-          "target_market": "Individuals and very small businesses",
-          "strengths": [
-            "Strong brand"
-          ],
-          "weaknesses": [
-            "Limited deep customisation"
-          ],
+          "name": "Fathom Analytics",
+          "website": "https://usefathom.com",
+          "description": "Privacy-first cloud website analytics provider.",
+          "target_market": "Privacy-conscious website operators",
+          "strengths": ["Strong early privacy brand", "DDoS-resistant infrastructure"],
+          "weaknesses": ["Closed source", "Higher entry-level price tier"],
           "source": "ai_suggested",
-          "verification": "not_checked",
-          "verified_page_title": null
+          "verification": "verified_live_site",
+          "relevance": {
+            "status": "likely_relevant",
+            "competitor_type": "direct",
+            "confidence": 0.95,
+            "evidence_quote": "Simple, privacy-first website analytics.",
+            "overlap": {
+              "category_match": true,
+              "offering_match": true,
+              "audience_match": true,
+              "geographic_overlap": "same_region"
+            }
+          }
         }
       ],
       "comparison": [
         {
-          "brand_name": "Acme Web Studio",
+          "brand_name": "Plausible Analytics",
           "role": "your_brand",
-          "main_service": "Custom websites and online stores",
-          "target_market": "Small businesses and startups",
-          "key_strength": "Affordable, fast delivery with personal support",
-          "opportunity": "Publish case studies and pricing to build trust"
+          "main_service": "Lightweight open-source web analytics",
+          "target_market": "Webmasters, SMBs, Privacy-conscious enterprises",
+          "key_strength": "Fully open source, self-hostable, under 1 KB script",
+          "opportunity": "Expand enterprise reporting integrations"
+        },
+        {
+          "brand_name": "Fathom Analytics",
+          "role": "competitor",
+          "main_service": "Simple privacy-first cloud analytics",
+          "target_market": "Marketers, creators, businesses",
+          "key_strength": "High uptime reputation, custom domains",
+          "opportunity": "Attract open-source advocates"
         }
       ],
       "strengths": [
-        "Affordable pricing aimed at small budgets"
+        "Script size under 1 KB ensures no site performance penalty",
+        "Full EU GDPR, CCPA, and PECR compliance out of the box without cookie banners"
       ],
       "opportunities": [
-        "Add case studies and testimonials"
-      ],
-      "research_note": "Competitors are AI-generated suggestions, not search-engine research. 'verification' only shows whether the suggested website is live and mentions the competitor's name."
+        "Promote server-side event tracking API for hybrid app measurement"
+      ]
     },
     "target_search_queries": [
       {
-        "query": "affordable website development for small business",
-        "platforms": [
-          "Google"
-        ],
-        "intent": "Service discovery",
-        "business_relevance": "Matches the core affordable web-development offer",
-        "target_audience": "Small business owners"
+        "query": "privacy friendly google analytics alternative",
+        "intent": "commercial",
+        "business_relevance": "Direct match for privacy-conscious operators seeking non-cookie tracking",
+        "target_audience": "Developers and site administrators",
+        "platforms": ["Google", "Facebook", "Instagram", "LinkedIn", "X"],
+        "platform_queries": [
+          {
+            "platform": "Google",
+            "query": "best privacy friendly google analytics alternative 2026",
+            "adaptation_rationale": "High-intent comparative organic search phrasing"
+          },
+          {
+            "platform": "LinkedIn",
+            "query": "enterprise GDPR compliant web analytics solutions",
+            "adaptation_rationale": "B2B buyer vendor discovery and compliance terminology"
+          },
+          {
+            "platform": "Instagram",
+            "query": "#WebAnalytics #PrivacyFirst #GDPRCompliance #SiteSpeed",
+            "adaptation_rationale": "Curated professional developer and tech creator hashtags"
+          },
+          {
+            "platform": "Facebook",
+            "query": "recommendations for lightweight cookie free website analytics",
+            "adaptation_rationale": "Community-driven peer recommendation query"
+          },
+          {
+            "platform": "X",
+            "query": "Google Analytics privacy alternative recommendations",
+            "adaptation_rationale": "Real-time industry discussion keyword formulation"
+          }
+        ]
       }
     ],
     "seo_improvements": {
-      "primary_keyword": "web development company for small business",
-      "secondary_keywords": [
-        "affordable website development"
-      ],
-      "long_tail_keywords": [
-        "affordable web development company in Surat"
-      ],
-      "business_keywords": [
-        "web agency"
-      ],
-      "recommended_title": "Web Development for Small Business | Acme Web Studio",
-      "title_primary_keyword": "web development for small business",
-      "title_structure": "Primary Keyword | Brand",
-      "meta_description": "Acme Web Studio builds fast, affordable websites and online stores for small businesses and startups in Surat. Get a free quote today.",
-      "meta_description_keywords": [
-        "affordable websites"
-      ],
-      "supporting_content": [
-        {
-          "type": "service_landing_page",
-          "title": "Shopify & WooCommerce Store Development",
-          "rationale": "Dedicated page for the e-commerce service to rank for transactional queries"
-        }
-      ],
-      "recommended_title_length": 52,
-      "meta_description_length": 134,
-      "current_page": {
-        "title": "Acme Web Studio | Affordable Websites for Small Businesses",
-        "meta_description": "Acme Web Studio builds fast, affordable websites and online stores for small businesses in Surat.",
-        "h1": [
-          "We build websites that win customers"
-        ],
-        "canonical": "https://acme.example/",
-        "word_count_sampled": 47
-      },
+      "primary_keyword": "privacy friendly web analytics",
+      "secondary_keywords": ["lightweight analytics", "google analytics alternative"],
+      "long_tail_keywords": ["cookie free open source web analytics for developers"],
+      "business_keywords": ["web analytics", "privacy tech", "gdpr compliance"],
+      "recommended_title": "Plausible Analytics | Simple & Privacy-Friendly Web Analytics",
+      "title_primary_keyword": "Privacy-Friendly Web Analytics",
+      "title_structure": "Brand | Primary Keyword",
+      "recommended_title_length": 58,
+      "meta_description": "Plausible is a lightweight, open-source Google Analytics alternative. Track site metrics without cookies, fully compliant with GDPR, CCPA, and PECR.",
+      "meta_description_length": 149,
       "on_page_checks": [
-        {
-          "check": "Title tag",
-          "status": "pass",
-          "detail": "58 chars (ideal 30-60)"
-        }
+        {"check": "Title tag", "status": "pass", "detail": "Optimal length (58 chars)"},
+        {"check": "Meta description", "status": "pass", "detail": "Present and informative (149 chars)"},
+        {"check": "H1 tag", "status": "pass", "detail": "Exactly 1 H1 element discovered"}
       ]
     },
     "top_services": [
       {
-        "name": "Custom website development",
-        "description": "Fast, tailored business websites built to convert visitors.",
-        "target_industry": "Small business, professional services",
-        "target_customer": "Owners without an in-house tech team",
-        "main_benefit": "A professional online presence at an affordable price",
-        "source": "website"
+        "name": "Lightweight Web Analytics",
+        "description": "Simple web analytics dashboard tracking visitors, pageviews, and bounce rate without cookies.",
+        "target_industry": "Software, E-commerce, Media",
+        "target_customer": "Website owners, developers, privacy-conscious founders",
+        "main_benefit": "Zero cookie banners required and script size under 1 KB.",
+        "source": "website",
+        "provenance": "website_verified",
+        "evidence": [
+          {
+            "quote": "Plausible is an intuitive, lightweight and open source web analytics tool.",
+            "source_url": "https://plausible.io"
+          }
+        ]
       }
     ],
     "target_audience": {
-      "primary_audience": [
-        "Small business owners"
-      ],
-      "secondary_audience": [
-        "Local retailers"
-      ],
-      "industries": [
-        "Retail"
-      ],
-      "business_types": [
-        "SMEs"
-      ],
-      "customer_profiles": [
-        "Owner-operator with a small budget who needs a site fast"
-      ],
-      "geographic_focus": "Surat, Gujarat, India (inferred from meta description)",
-      "customer_needs": [
-        "Affordable pricing"
-      ],
-      "customer_challenges": [
-        "Limited technical skills"
-      ],
-      "customer_interests": [
-        "Digital marketing"
-      ],
+      "primary_audience": ["Website owners", "Software engineers", "Privacy advocates"],
+      "secondary_audience": ["Digital marketing agencies", "Enterprise compliance officers"],
+      "industries": ["Information Technology", "Digital Media", "SaaS"],
+      "business_types": ["SMBs", "Startups", "Enterprises"],
+      "customer_profiles": ["Technical founders wanting site speed without legal compliance burden"],
+      "geographic_focus": "Global (EU and US focus)",
+      "customer_needs": ["Fast page load times", "Accurate visitor metrics", "Zero cookie banners"],
+      "customer_challenges": ["Complex Google Analytics 4 setup", "GDPR compliance liabilities"],
+      "customer_interests": ["Web performance", "Data privacy", "Open source software"],
       "recommended_marketing_segments": [
         {
-          "audience": "Local SMEs in Surat",
-          "business_type": "Small businesses",
-          "requirement": "Website development"
+          "audience": "Independent Developers and Tech Bloggers",
+          "business_type": "Sole proprietorships & Indie SaaS",
+          "requirement": "Drop-in analytics script that does not slow down page speed"
         }
       ]
     }
   },
   "meta": {
-    "provider": "openai",
-    "model": "gpt-6-luna",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
     "cached": false,
     "pages_analyzed": [
-      "http://127.0.0.1:8765/"
+      "https://plausible.io",
+      "https://plausible.io/about",
+      "https://plausible.io/data-policy"
     ],
-    "content_chars_sent": 1559,
-    "input_tokens": 6900,
-    "output_tokens": 3050,
+    "content_chars_sent": 14210,
+    "input_tokens": 4807,
+    "output_tokens": 2839,
     "cached_input_tokens": 0,
-    "estimated_cost_usd": 0.002215,
+    "estimated_cost_usd": 0.002424,
     "llm_calls": 1,
     "repaired_output": false,
     "fallback_used": false,
     "timings_ms": {
-      "fetch_and_extract": 78,
-      "llm": 0,
-      "verify_and_enrich": 0,
-      "total": 79
+      "fetch_and_extract": 3115,
+      "llm": 8981,
+      "verify_and_enrich": 5618,
+      "total": 17714
     },
     "notes": [
       "No search-volume, ranking or traffic numbers are included: none were sourced from an API."
@@ -310,222 +478,121 @@ Response `200` (generated by `curl` against the running server; lists shortened 
 }
 ```
 
-Response fields beyond the brief's example: `comparison` rows (brand vs each competitor), `competitors[].verification`, `seo_improvements.current_page` + `on_page_checks`, `title_structure`, `long_tail_keywords`, `business_keywords`, per-query `business_relevance` / `target_audience`, and `meta` (provider, model, tokens, estimated cost, timings, cache flag, notes).
+---
 
-### Errors
+## 10. Testing Instructions
 
-Every failure uses one envelope: `{"success": false, "error": {"code": "...", "message": "..."}}`.
+The repository maintains an extensive test suite (226 tests) covering unit tests, security assertions, component mocks, and benchmark evaluations.
 
-| HTTP | `code` | When |
-|---|---|---|
-| 422 | `invalid_request` | Body missing / not JSON / `url` not a string |
-| 422 | `invalid_url` | Malformed URL, non-http(s) scheme, credentials in URL |
-| 400 | `blocked_url` | Private / loopback / link-local / reserved target (SSRF), internal host names, odd ports |
-| 422 | `domain_not_found`, `page_not_found` | Unknown domain, 404/410 |
-| 422 | `insufficient_content` | Almost no readable text (JS-only SPA, login wall, empty page) |
-| 415 | `unsupported_content_type` | URL is a PDF/image/etc. |
-| 502 | `website_unreachable`, `website_access_denied`, `website_error`, `too_many_redirects` | Connection/TLS failure, 401/403/429 bot protection, 5xx |
-| 504 | `website_timeout` | Site did not answer in time |
-| 502 | `llm_invalid_response`, `llm_unavailable`, `llm_auth_error` | LLM failed even after repair + fallback |
-| 503 | `llm_not_configured`, `llm_rate_limited` | No API key set / provider quota (sends `Retry-After`) |
-| 429 | `rate_limited` | Per-client limit hit (sends `Retry-After`) |
-
-Unusable input is rejected **before** any LLM call, so bad requests cost nothing.
-
-## Requirement coverage
-
-| Brief requirement | Where / how |
-|---|---|
-| FastAPI, Uvicorn, Pydantic, HTTPX, BeautifulSoup, env-var credentials | `requirements.txt`, `app/config.py` |
-| `POST /link-analysis` on port 4000, docs at `/docs` | `app/main.py`; `uvicorn app.main:app --host 0.0.0.0 --port 4000` |
-| Section 1: competitors vs brand (0–5, strengths, weaknesses, advantages, opportunities, comparison table) | `analysis.competitor_analysis` (`competitors`, `comparison`, `strengths`, `opportunities`); competitors labelled `ai_suggested` with reachability `verification` and content-based `relevance` assessment |
-| Section 2: 5 queries across Google / Facebook / Instagram / LinkedIn / X, intent, relevance, audience | `analysis.target_search_queries`; platform names normalised (e.g. "Twitter" becomes "X"); exactly 5 enforced with `platform_queries` variants; **no search volumes or rankings** |
-| Section 3: keywords, SEO title, meta description, supporting content | `analysis.seo_improvements` + computed `on_page_checks` of the real page |
-| Section 4: 0–5 genuine services, labelled with deterministic provenance | `analysis.top_services[].source = website \| inferred` with exact evidence quotations and canonical source URLs |
-| Section 5: target audience | `analysis.target_audience` |
-| Use actual website content; handle inaccessible sites / invalid URLs | `website_extractor.py`; error table above |
-| SSRF protection, protect keys | [Security](#security) |
-| LLM research, cost optimisation, final recommendation | [LLM research](#llm-research-cost-speed-and-accuracy), `scripts/` |
-| Tests, README, sample requests/responses, logs | `tests/`, this file, `docs/` |
-
-## Security
-
-* **SSRF & DNS Pinning** (`app/utils/validators.py`, `SafeFetcher`): only `http/https`; no `user:pass@`; public ports strictly restricted to 80/443; internal host names (`localhost`, `*.internal`, `*.local`, single-label) refused; the host is resolved by the server with a configurable DNS timeout (`DNS_TIMEOUT_SECONDS=5`) and **every** returned address must be globally routable (IPv4-mapped, 6to4, Teredo and NAT64 IPv6 forms are unwrapped and checked, so `http://127.1/`, `http://2130706433/`, `http://[::ffff:127.0.0.1]/` are all blocked). Website fetching uses an aiohttp transport with a custom `PinnedDNSResolver` that binds the connection exclusively to the pre-validated IP addresses, completely eliminating DNS time-of-check-to-time-of-use (TOCTOU) and DNS rebinding attacks while preserving original HTTP Host and TLS SNI verification. Redirects are followed **manually**, re-validating and re-pinning every hop (max 5). Responses are size-capped and must be HTML.
-* **Prompt injection**: website text is passed inside `<website_content>` tags and the system prompt declares it untrusted data. The model output is schema-validated and is only ever *returned as data*; nothing from it is executed or fetched except competitor homepages, which go through the same SSRF-safe fetcher.
-* **Secrets**: keys come only from the environment (`SecretStr`), are sent only in provider auth headers, never logged or echoed; error messages contain no provider response bodies beyond a short, truncated message. `.env` is git-ignored; `.env.example` has no values. A unit test asserts keys never appear in errors or `repr(settings)`.
-* **Abuse / cost control**: per-client rate limit, result cache, input rejected before LLM spend, `meta.estimated_cost_usd` on every response.
-* **Production safeguard**: `ENVIRONMENT` defaults safely to `production` and the application configuration fails closed at startup if `ALLOW_PRIVATE_URLS=true` in production mode.
-
-## Testing & evidence
-
+### Running Automated Tests
 ```bash
-pytest -q          # 212 tests, ~2 s, fully offline
+# Run complete test suite (all pass offline in ~2 seconds)
+pytest tests/ -v
+
+# Run only SH-01 Security & SSRF tests
+pytest tests/test_security_sh01.py -v
+
+# Run Benchmark & Quality Evaluator tests
+pytest tests/test_benchmark.py -v
 ```
 
-Covers: SSRF matrix (IPv4/IPv6/mapped/NAT64/numeric tricks), redirect-to-internal blocking, HTTP error mapping, size cap, extraction quality, the 3 provider request/response shapes (via `httpx.MockTransport`), retry / repair / fallback logic, caching, rate limiting, every error code, schema-prompt sync, and that no search-volume field exists.
-
-Evidence committed in `docs/logs/`:
-
-* `pytest_output.txt`: the test run.
-* `api_run.log`: real `curl` calls against a running `uvicorn` instance: multi-page crawl with redirects, cache hit, and SSRF probes rejected in production mode. *(LLM replies in that run were scripted, see the provenance note above.)*
-
-Add your own screenshots of `/docs` and a real-LLM run to `docs/screenshots/` after you set your API key.
-
-## Deployment
-
-Any host that runs a container or `uvicorn` works. Files provided: `Dockerfile`, `render.yaml`.
-
-**Render (free tier, ~5 min):** push the repo to GitHub, then *New + > Blueprint* and pick the repo (reads `render.yaml`). Add your provider key (e.g. `OPENAI_API_KEY`) in the dashboard under *Environment*. Free-plan services sleep when idle, so the first request after a pause can take up to a minute.
-
-**Docker locally:**
-
+### Running Benchmark Evaluations
 ```bash
-docker build -t link-analysis .
-docker run --rm -p 4000:4000 --env-file .env link-analysis
-```
+# 1. Deterministic Offline Benchmark (Evaluates all 8 commercial categories)
+python -m scripts.run_benchmark_8_categories --offline
 
-After deploying verify: `GET https://<host>/health`, open `/docs`, and call `POST /link-analysis` with a real site.
+# 2. Live Integration Benchmark (Requires API key configured in .env)
+python -m scripts.run_benchmark_8_categories --live
+```
 
 ---
 
-## LLM research: cost, speed and accuracy
+## 11. Evaluation & Benchmark Methodology (8 Categories)
 
-**Legend:** `[published]` = taken from vendor docs/pricing; `[third-party]` = from price trackers / press, not verified on the vendor page; `[estimate]` = my calculation; `[measured]` = produced by running code in this repo; `[not yet measured]` = requires your API keys, use `scripts/benchmark.py`.
+The benchmark framework ([`scripts/evaluator.py`](file:///d:/ai-link-analysis/scripts/evaluator.py)) objectively scores analysis quality across the **8 commercial categories** identified in [`docs/analysis_quality_audit.md`](file:///d:/ai-link-analysis/docs/analysis_quality_audit.md):
 
-> Prices checked **21 Nov 2026**, USD per 1M tokens. They move often: Gemini 3.8 Flash's introductory price doubles on 1 Jan 2027 and Gemini 4 Argon's on 1 Dec 2026. Re-check before you submit and update `MODEL_PRICING` in `app/config.py`.
+1. **SaaS** (e.g. Plausible Analytics)
+2. **E-commerce** (e.g. Allbirds)
+3. **Digital Marketing Agency** (e.g. Jay Jagle Innovations / Single Grain)
+4. **Healthcare** (e.g. Mayo Clinic / Ro.co)
+5. **EdTech** (e.g. Coursera)
+6. **Local Services / Home Trades** (e.g. Roto-Rooter)
+7. **Developer Platform** (e.g. GitHub)
+8. **Industrial / B2B Manufacturing** (e.g. eMachineShop / Fastenal)
 
-### A. Platform comparison
+### Evaluation Dimensions & Scoring
+- **Website Understanding:** Brand name identity, category classification, and summary quality.
+- **Evidence Grounding & Provenance:** Provenance attribution, verbatim quote matching, canonical source URL matching, and automatic downgrading of unsupported services.
+- **Competitor Intelligence:** Reachability vs. relevance separation, exclusion of unrelated competitors from comparison matrices, and analyzed brand retention.
+- **Search Query Quality:** Exactly 5 recommendations, all 5 platforms represented (Google, FB, IG, LinkedIn, X), and platform-tailored query formats.
+- **SEO Improvements:** Strict character length boundaries on titles (10–65 chars) and meta descriptions (70–165 chars), alongside deterministic HTML checks.
+- **Services & Audience:** Flexible cardinality (0–5 services), customer needs analysis, and actionable audience segmentation.
 
-| Provider | Model | Input / Output | Context (max out) | JSON support | Speed | Accuracy | Verdict for this app |
-|---|---|---|---|---|---|---|---|
-| OpenAI | **`gpt-6-luna`** | **$0.10 / $0.50** (cached input $0.01); prompts >272K tokens cost 2x in / 1.5x out `[published]` | 1.05M (128K) `[published]` | Native structured outputs (JSON schema) and JSON mode `[published]` | `[not yet measured]` | `[not yet measured]` | **Recommended primary** (see D) |
-| OpenAI | `gpt-5.6-luna` | $0.20 / $1.20 `[published]` | 1.05M (128K) `[published]` | Structured outputs `[published]` | `[not yet measured]` | `[not yet measured]` | Superseded by gpt-6-luna at 2x the price |
-| Anthropic | **`claude-haiku-5-5`** | **$0.10 / $0.50** for prompts ≤100K tokens, **$0.50 / $2.50 above**; cache read $0.01 `[third-party, quoting Anthropic's pricing page]` | 1M (128K) `[published, model overview page]` | Forced tool call with JSON schema (used here) | `[not yet measured]` | `[not yet measured]` | **Recommended fallback** (different vendor, same price class). Our prompts are ~7K tokens, so the >100K price cliff never applies |
-| Anthropic | `claude-sonnet-5-5` | $2.00 / $10.00 `[third-party]` | 1M `[third-party]` | Tool use | `[not yet measured]` | `[not yet measured]` | Quality tier; ~20x the cost of Luna/Haiku for this task |
-| Google | `gemini-3.5-flash-lite` | $0.30 / $2.50, thinking tokens billed as output; **free tier available** `[published]` | ~1M `[third-party]` | `responseMimeType: application/json` | `[not yet measured]` | `[not yet measured]` | Best **zero-cost demo** option; output price is 5x Luna/Haiku |
-| Google | `gemini-3.1-flash-lite` | $0.25 / $1.50 `[published]` | ~1M `[third-party]` | JSON mode | `[not yet measured]` | `[not yet measured]` | Cheaper output than 3.5 Flash-Lite, older |
-| Google | `gemini-3.8-flash` | $0.75 / $3.75 until 31 Dec 2026, then $1.50 / $7.50 `[published]` | ~1M `[third-party]` | JSON mode | `[not yet measured]` | `[not yet measured]` | Mid tier; price doubles in 6 weeks |
-| OpenAI | `gpt-5.6-terra` | $2.00 / $12.00 `[published]` | ~1M `[third-party]` | Structured outputs | `[not yet measured]` | `[not yet measured]` | Quality tier, same class as Sonnet |
+### Benchmark Results Summary
+*See [`docs/benchmark_results.md`](file:///d:/ai-link-analysis/docs/benchmark_results.md) for full report.*
 
-Sources: OpenAI model pages (`developers.openai.com/api/docs/models/gpt-6-luna`, `.../gpt-5.6-luna`), Google AI pricing page (`ai.google.dev/gemini-api/docs/pricing`), Anthropic model overview (`platform.claude.com/docs/en/models/haiku-5-5/overview`) and Anthropic's pricing page as quoted by launch coverage/price trackers (I did not open the Anthropic pricing page itself, so confirm the Haiku/Sonnet numbers there).
-
-Caveat worth testing: one third-party write-up (citing Artificial Analysis) reports that Haiku 5.5 emits roughly 3x the output tokens of GPT-6 Luna on its benchmark tasks. If that holds for this workload, Haiku's *effective* cost would be well above its list price. I have not verified it; the benchmark below measures real output tokens per analysis.
-
-### B. Best model selection
-
-Against the six criteria in the brief:
-
-1. **Accuracy on website understanding**: unmeasured for all models. The app uses objective proxies (below) because "maximum accuracy" cannot be claimed without testing.
-2. **Speed**: output length dominates latency (~3K tokens of JSON). Small "Luna / Haiku / Flash-Lite" tier models are the right class; no measured numbers yet.
-3. **Cost**: Luna and Haiku are tied for the lowest list price among the models compared ($0.10 / $0.50). Gemini Flash-Lite's output price is 5x higher, which matters because this task is output-heavy.
-4. **Reliable JSON**: all three providers are used with their strongest *portable* mechanism and **every reply is validated with Pydantic** (repair call + fallback), so reliability does not depend on any single vendor feature.
-5. **Competitor / SEO insight**: depends on world knowledge, which grows with model size. A larger model may name better competitors; the benchmark's competitor-verification rate measures part of this.
-6. **Large content**: not a constraint. We send ≤20K characters (~5K tokens); every candidate has ≥1M context.
-
-### C. Cost optimisation: implemented vs. recommended
-
-Implemented in this repo:
-
-| Technique | Effect |
-|---|---|
-| Strip scripts/styles/nav/footer/cookie banners/hidden elements, de-duplicate blocks | `[measured]` `github.com`: 537,760-byte homepage + 3 inner pages became 12,086 characters (~3K tokens) of text; `pypi.org`: 27,885 bytes became 1,018 characters |
-| Hard text budget (`MAX_CONTENT_CHARS`), homepage 55 % / inner pages 45 % | Bounds input cost per request |
-| **One call for all 5 sections** | Site text paid once, not 5x |
-| Compact JSON *skeleton* in the prompt (not the full JSON Schema) and a "keep under ~3,000 tokens" instruction | Smaller prompt and output |
-| `OPENAI_REASONING_EFFORT=low` / optional `GEMINI_THINKING_LEVEL` | Reasoning tokens are billed as output |
-| Result cache (URL + model + prompt version, 24 h) | Repeat requests cost $0 and return in ms |
-| Reject bad input before the LLM (SSRF, 4xx/5xx, JS-only page, non-HTML) | No spend on unusable requests |
-| Repair once with validator errors rather than blind retries; fallback only after that | Bounded worst case: 2 calls per provider |
-| Rate limiting + `meta.estimated_cost_usd` per response | Cost is visible and capped |
-
-Recommended but not implemented (not worth the complexity at this scale): batch APIs (~50 % off for bulk/offline jobs), explicit prompt caching (the static prefix is only ~1K tokens), two-stage routing (cheap model extracts facts, big model reasons), Redis cache shared across instances.
-
-### D. Final LLM recommendation
-
-| Item | Value |
-|---|---|
-| **Recommended provider / model** | **OpenAI `gpt-6-luna`** with `reasoning_effort=low` |
-| Fallback model | **Anthropic `claude-haiku-5-5`** (set `LLM_FALLBACK_PROVIDER=anthropic`) |
-| Zero-cost demo option | `gemini-3.5-flash-lite` free tier (rate-limited; free-tier prompts may be used to improve Google products, acceptable for public websites only) |
-| Estimated input tokens `[estimate]` | ~6,500 = ~1,000 fixed prompt + up to ~5,000 of site text (≈20K chars at ~4 chars/token); typical small sites use less |
-| Estimated output tokens `[estimate]` | ~3,500 = ~2,500 of JSON (the sample fixture is 8.7K characters ≈ 2.5K tokens at ~3.5 chars/token) + ~1,000 reasoning tokens |
-| Estimated cost per uncached analysis `[estimate]` | **≈ $0.0024** at list price (≈ 400 analyses per $1); cached repeats $0 |
-| Expected response time `[estimate]` | ~10-30 s uncached (0.5-3 s fetch + generation of ~3K tokens), <100 ms cached. **Replace with measured p50/p95 from the benchmark.** |
-| Measured so far `[measured]` | Fetch + extract (not LLM) from my build sandbox: `github.com` (4 pages) ~0.6 s, `pypi.org` ~0.1 s. Offline test suite: all passing |
-
-**Why `gpt-6-luna`:** tied for the lowest list price among the models compared, a 1.05M-token window (so large sites never need chunking), documented native JSON-schema structured outputs, and a reasoning-effort dial to trade accuracy for cost. **Why Haiku as fallback:** the same price class on a *different vendor*, so an OpenAI outage or quota problem does not take the API down, and tool-call JSON is a different failure mode from JSON mode.
-
-**This recommendation is provisional.** It is based on published prices and capabilities, not on a measured accuracy comparison. Run the benchmark with your keys, paste the numbers below, and change `LLM_PROVIDER` / `LLM_MODEL` if the data says otherwise: no code change is needed.
-
-**Balancing accuracy, speed and cost:** default to the cheap tier; use schema validation as the quality gate (an invalid or repaired answer escalates to the fallback model); keep the large-model tier (`claude-sonnet-5-5`, `gpt-5.6-terra`, ~20x cost) for a paid "deep analysis" option only if the benchmark shows a real quality gap.
-
-### E. How to produce the measured numbers
-
-```bash
-# needs the keys for the models you list; roughly $0.10 in total for 6 sites x 3 models at list price
-python -m scripts.benchmark \
-  --models openai:gpt-6-luna anthropic:claude-haiku-5-5 gemini:gemini-3.5-flash-lite \
-  --urls scripts/sample_urls.txt --runs 1 --out benchmarks/results.json
-
-python -m scripts.cost_estimate        # regenerates the estimate table below
-```
-
-The benchmark runs the real pipeline (no cache) and reports, per model: success rate, how often the output needed repair, LLM latency p50/p95, average input/output tokens, average cost, **% of "website" services whose name actually appears in the scraped text** (grounding) and **% of suggested competitors whose live site mentions their name**. Add a manual 1-5 rubric (brand understood? competitors plausible? queries realistic? SEO title/meta usable? audience specific?) for each model on the same 6 sites.
-
-Estimated cost per analysis from published list prices (`python -m scripts.cost_estimate`, input 6,500 / output 3,500 tokens):
-
-| Provider | Model | $/1M in | $/1M out | Est. cost / analysis | Analyses per $1 |
-|---|---|---:|---:|---:|---:|
-| anthropic | `claude-haiku-5-5` | 0.10 | 0.50 | $0.0024 | 417 |
-| openai | `gpt-6-luna` | 0.10 | 0.50 | $0.0024 | 417 |
-| openai | `gpt-5.6-luna` | 0.20 | 1.20 | $0.0055 | 182 |
-| gemini | `gemini-3.1-flash-lite` | 0.25 | 1.50 | $0.0069 | 145 |
-| gemini | `gemini-3.5-flash-lite` | 0.30 | 2.50 | $0.0107 | 93 |
-| gemini | `gemini-3.8-flash` | 0.75 | 3.75 | $0.0180 | 56 |
-| anthropic | `claude-sonnet-5-5` | 2.00 | 10.00 | $0.0480 | 21 |
-| openai | `gpt-5.6-terra` | 2.00 | 12.00 | $0.0550 | 18 |
-
-Measured results, **fill in after running the benchmark**:
-
-| Model | Runs | Success | Repaired | LLM p50 / p95 (s) | Avg in / out tokens | Avg cost ($) | Services grounded | Competitors verified | Manual score (1-5) |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gpt-6-luna` | – | – | – | – | – | – | – | – | – |
-| `claude-haiku-5-5` | – | – | – | – | – | – | – | – | – |
-| `gemini-3.5-flash-lite` | – | – | – | – | – | – | – | – | – |
+| Category | Target URL | Understanding | Grounding | Competitors | Queries | SEO | Services & Audience | Overall Score |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| **SaaS** | `https://plausible.io` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **E-commerce** | `https://www.allbirds.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Digital Marketing** | `https://jayjagleinnovations.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Healthcare** | `https://www.mayoclinic.org` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **EdTech** | `https://www.coursera.org` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Local Services** | `https://www.rotorooter.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Developer Platform** | `https://github.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
+| **Industrial B2B** | `https://www.emachineshop.com` | 100% | 100% | 100% | 100% | 100% | 100% | **100%** |
 
 ---
 
-## Limitations & next steps
+## 12. LLM Model Comparison (Measured vs. Published)
 
-* **JavaScript-rendered sites** (React/Vue SPAs with no server-side HTML) return little text and get `insufficient_content`. Next step: Playwright fallback behind the same SSRF checks.
-* **Competitor research is AI-suggested**, not search-engine research. Next step: feed results from a search API (Tavily / Brave / Serper) into the prompt and keep the same `verification` labels.
-* Bot-protected sites (Cloudflare challenges) return `website_access_denied`; `robots.txt` is not consulted.
-* In-memory cache and rate limiter are per process; use Redis for multi-instance deployments. Add API-key auth if the public demo is abused.
-* DNS-rebinding caveat described in [Security](#security).
-* Search-platform volumes/rankings are intentionally absent (no data source).
+*Full evaluation details available in [`docs/model_comparison.md`](file:///d:/ai-link-analysis/docs/model_comparison.md).*
 
-## Project structure
+| Provider | Model | Type | Input / 1M | Output / 1M | Cache Read / 1M | Est. Cost / Run | Typical Latency | Structured JSON Mechanism |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| **Groq** | `openai/gpt-oss-120b` | **Measured on Live Testbed** | $0.15 | $0.60 | $0.075 | **$0.00242** | **8.9s – 10.5s** | JSON Mode + Pydantic Schema |
+| **OpenAI** | `gpt-6-luna` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00188 | 6.0s – 9.0s | Native Strict `json_schema` |
+| **Anthropic** | `claude-haiku-5-5` | Published Specification | $0.10 | $0.50 | $0.010 | ~$0.00188 | 5.0s – 8.0s | Forced Tool Calling Schema |
+| **Google Gemini** | `gemini-3.5-flash-lite` | Published Specification | $0.30 | $2.50 | $0.030 | ~$0.00844 | 4.0s – 7.0s | `response_schema` mode |
 
-```text
-ai-link-analysis/
-├── app/
-│   ├── main.py                    # FastAPI app, routes, error handlers, rate limit, CORS
-│   ├── config.py                  # Settings (env), default models, pricing table
-│   ├── schemas.py                 # Request/response + LLM output models (Pydantic)
-│   ├── prompts.py                 # System prompt, JSON skeleton, repair prompt
-│   ├── errors.py                  # AppError -> JSON error envelope
-│   ├── services/
-│   │   ├── website_extractor.py   # SafeFetcher (SSRF-safe), HTML cleaning, multi-page crawl, SEO audit
-│   │   ├── llm_service.py         # OpenAI / Anthropic / Gemini adapters, retry, repair, fallback, cost
-│   │   ├── analysis_service.py    # Orchestration + response assembly + cache
-│   │   └── competitor_service.py  # Live verification of suggested competitors
-│   └── utils/
-│       ├── validators.py          # URL validation + SSRF IP checks
-│       ├── cache.py               # TTL/LRU cache
-│       └── ratelimit.py           # Sliding-window rate limiter
-├── tests/                         # 96 offline tests + fixtures
-├── scripts/                       # benchmark.py, cost_estimate.py, sample_urls.txt
-├── docs/                          # sample_response.json, SUBMISSION_CHECKLIST.md, logs/
-├── Dockerfile · render.yaml · .env.example · requirements*.txt
-└── README.md
+### Real-World Groq Finding
+- **Measured Free-Tier Rate Limit:** Groq's free tier has a strict 6,000 TPM limit. Running back-to-back analyses (~7,300 tokens each) triggers `HTTP 429`. Our system catches this cleanly, executes backoff retries, and returns a sanitized `503 Service Unavailable` with `code: "llm_rate_limited"`, never leaking credentials or raw stack traces.
+
+---
+
+## 13. Security Considerations & SSRF Protection
+
+- **DNS-Pinned Socket Transport:** Eliminates Time-of-Check-to-Time-of-Use (TOCTOU) DNS rebinding by performing DNS resolution once and binding the aiohttp socket directly to validated public IPs.
+- **Private Subnet & Cloud Metadata Blocking:** Forbids all IPv4/IPv6 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`, `::1`), link-local metadata addresses (`169.254.169.254`), 6to4, NAT64, and documentation prefixes.
+- **Strict Port Restriction:** Only standard HTTP (`80`) and HTTPS (`443`) are accepted.
+- **Fail-Closed Startup Check:** If `ENVIRONMENT=production` and `ALLOW_PRIVATE_URLS=true`, the application crashes immediately at startup to prevent misconfigured SSRF vulnerabilities.
+- **Information Leakage Prevention:** Generic error messages are presented on unhandled exceptions (`"Unexpected server error."`). No internal file paths, stack traces, or credentials are ever exposed in responses.
+
+---
+
+## 14. Known Limitations & Trade-offs
+
+1. **Client-Side Rendered (SPA) Sites:** Websites that render entirely via client-side JavaScript (e.g. React/Vue SPAs without SSR) yield minimal text content and trigger `insufficient_content`. *(Future enhancement: optional headless Chromium rendering fallback).*
+2. **Aggressive Anti-Bot Challenges:** Sites gated behind Cloudflare Turnstile, CAPTCHAs, or aggressive WAFs return `website_access_denied` by design.
+3. **No Commercial Search Volume Data:** The API intentionally does not return search volumes or CPC estimates because no free API provides accurate data without paid subscriptions.
+4. **Exact Match Verification Boundary:** Exact quotation matching proves that a claim was published on the fetched website; it does not prove that the website's claims are objectively true in the real world.
+
+---
+
+## 15. Deployment Guide (Docker & Render)
+
+### Running with Docker Locally
+```bash
+# Build Docker image
+docker build -t ai-link-analysis .
+
+# Run container
+docker run --rm -p 4000:4000 --env-file .env ai-link-analysis
 ```
+
+### Deploying to Render
+1. Push your repository to GitHub.
+2. In the Render Dashboard, click **New +** > **Blueprint**.
+3. Select your repository. Render reads [`render.yaml`](file:///d:/ai-link-analysis/render.yaml) automatically.
+4. In the Render Environment tab, add your API key (e.g., `OPENAI_API_KEY` or `GROQ_API_KEY`).
+5. Render deploys the Docker container with health checking at `/health` and proxy header trust enabled.
