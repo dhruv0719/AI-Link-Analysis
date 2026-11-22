@@ -130,6 +130,10 @@ class AnalysisService:
             "Customer profiles, needs, challenges, and marketing segments are AI-generated inferences "
             "and recommendations, not website-verified facts."
         )
+        notes.append(
+            "Competitor identifications, descriptions, strengths, and weaknesses are AI analytical suggestions "
+            "and market interpretations, not verified facts from the analysed website."
+        )
 
         if any(p.truncated_source for p in site.pages):
             notes.append("A page was larger than the size cap; only its first part was analysed.")
